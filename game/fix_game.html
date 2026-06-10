@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>潮汕嵌瓷 · 非遗手工体验</title>
+<style>
+    /* ========== 基础 ========== */
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; }
+    body {
+        font-family: "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+        color: #3a2c20;
+        background:
+            radial-gradient(ellipse at top, #fff4e3 0%, #f8e7cd 60%, #f0d8b7 100%);
+        overflow-x: hidden;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .app {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 16px;
+        flex: 1;
+        width: 100%;
+    }
+
+    h1 { font-size: 26px; text-align: center; letter-spacing: 2px; color: #7a4f2d; }
+    h2 { font-size: 20px; text-align: center; color: #7a4f2d; margin: 12px 0; }
+    h3 { font-size: 16px; color: #7a4f2d; margin-bottom: 8px; }
+    p  { line-height: 1.75; font-size: 14px; color: #5d4530; }
+
+    /* ========== 顶部标题与步骤指示条 ========== */
+    .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 4px 16px;
+    }
+    .back-btn {
+        background: none;
+        border: 1px solid #c89c6c;
+        color: #7a4f2d;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        cursor: pointer;
+    }
+    .step-label {
+        font-size: 13px;
+        color: #a87746;
+        letter-spacing: 1px;
+    }
+    .steps {
+        display: flex;
+        gap: 4px;
+        margin: 8px 0 16px;
+        flex-wrap: wrap;
+    }
+    .steps .dot {
+        flex: 1;
+        min-width: 40px;
+        height: 6px;
+        background: #e4c8a6;
+        border-radius: 4px;
+    }
+    .steps .dot.done { background: #c89c6c; }
+    .steps .dot.active { background: #c89c6c; box-shadow: 0 0 0 2px #fff6e4 inset; }
+
+    /* ========== 卡片 ========== */
+    .card {
+        background: linear-gradient(180deg, #fffaef 0%, #fff3df 100%);
+        border: 1px solid #ebd9b4;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 6px 16px rgba(122, 79, 45, 0.08);
+    }
+    .card + .card { margin-top: 16px; }
+
+    /* ========== 按钮 ========== */
+    .btn {
+        display: inline-block;
+        background: linear-gradient(135deg, #c89c6c 0%, #a87746 100%);
+        color: #fff8ea;
+        border: none;
+        border-radius: 999px;
+        padding: 10px 22px;
+        font-size: 15px;
+        cursor: pointer;
+        letter-spacing: 2px;
+        transition: transform 0.15s ease, opacity 0.2s;
+    }
+    .btn.ghost {
+        background: transparent;
+        color: #7a4f2d;
+        border: 1px solid #c89c6c;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn:not(:disabled):hover { transform: translateY(-1px); }
+    .btn-row {
+        display: flex; justify-content: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+
+    /* ========== 首页 ========== */
+    .hero {
+        text-align: center;
+        padding: 24px 12px 18px;
+        background: linear-gradient(135deg, #4c6ef5, #845ef7);
+        color: #fff;
+        border-radius: 16px;
+        margin-bottom: 14px;
+        box-shadow: 0 6px 16px rgba(76,110,245,0.25);
+    }
+    .hero .emoji-big { font-size: 44px; margin-bottom: 6px; letter-spacing: 4px; }
+    .hero h1 { color: #fff; margin-bottom: 4px; }
+    .hero .subtitle { color: rgba(255,255,255,0.85); letter-spacing: 4px; font-size: 13px; }
+
+    /* ========== 关卡选择 ========== */
+    .levels {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 10px;
+    }
+    .level {
+        border-radius: 16px;
+        padding: 20px 10px;
+        text-align: center;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        position: relative;
+        min-height: 170px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        color: #fff;
+        font-weight: 600;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    }
+    .level:hover { transform: translateY(-3px); }
+    .level .ltitle { font-size: 22px; letter-spacing: 2px; }
+    .level .lmeta { font-size: 12px; line-height: 1.8; opacity: 0.9; margin-top: 8px; font-weight: 500; }
+    .level.level-1 { background: linear-gradient(135deg, #ff7a7a, #ff4d4d); }
+    .level.level-2 { background: linear-gradient(135deg, #ffb54d, #ff922b); }
+    .level.level-3 { background: linear-gradient(135deg, #4dabf7, #1971c2); }
+
+    /* ========== 灰浆配比 ========== */
+    .mortar {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        padding: 10px 0;
+    }
+    .barrel {
+        width: 100%;
+        max-width: 320px;
+        min-height: 140px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #8a5a31, #6b3f1e);
+        box-shadow: inset 0 6px 20px rgba(0,0,0,0.25), 0 6px 12px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff5d6;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 4px;
+        text-align: center;
+        padding: 12px;
+    }
+    .chips {
+        display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+    }
+    .chip {
+        padding: 12px 18px;
+        border-radius: 14px;
+        font-size: 15px;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+        letter-spacing: 2px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        border: none;
+    }
+    .chip.chip-shell { background: linear-gradient(135deg, #f76707, #d9480f); }
+    .chip.chip-paper { background: linear-gradient(135deg, #339af0, #1971c2); }
+    .chip.chip-sugar { background: linear-gradient(135deg, #fcc419, #f59f00); }
+    .chip:active { transform: translateY(1px); }
+
+    .recipe {
+        display: flex; gap: 12px; margin-top: 10px; justify-content: center;
+    }
+    .recipe-item {
+        padding: 10px 14px;
+        border-radius: 12px;
+        text-align: center;
+        color: #fff;
+        font-size: 13px;
+        min-width: 92px;
+        font-weight: 600;
+    }
+    .recipe-item .count { font-size: 24px; font-weight: 800; margin-top: 4px; letter-spacing: 2px; }
+    .recipe-item.rec-shell { background: linear-gradient(135deg, #f76707, #d9480f); }
+    .recipe-item.rec-paper { background: linear-gradient(135deg, #339af0, #1971c2); }
+    .recipe-item.rec-sugar { background: linear-gradient(135deg, #fcc419, #f59f00); }
+
+    /* ========== 拖拽拼图（骨架 / 镶嵌） ========== */
+    .puzzle-wrap {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 12px;
+    }
+    @media (max-width: 520px) {
+        .puzzle-wrap { grid-template-columns: 1fr; }
+    }
+    .puzzle-board, .puzzle-pool {
+        min-height: 320px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 14px;
+        padding: 14px;
+    }
+    .board-title {
+        text-align: center;
+        font-size: 13px;
+        color: #5f3dc4;
+        margin-bottom: 12px;
+        letter-spacing: 2px;
+        font-weight: 600;
+    }
+    .slots { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+    .slot {
+        width: 100px; height: 100px; border-radius: 14px;
+        border: 2px dashed #adb5bd;
+        background: #f1f3f5;
+        color: #495057;
+        display: flex; align-items: center; justify-content: center;
+        transition: all 0.2s ease;
+        font-size: 13px;
+        font-weight: 600;
+        text-align: center;
+        padding: 6px;
+        touch-action: none;
+    }
+    .slot.over {
+        border-color: #4c6ef5;
+        background: #dbe4ff;
+        color: #364fc7;
+        transform: scale(1.06);
+    }
+    .slot.filled {
+        border-style: solid;
+        border-color: #51cf66;
+        background: #d3f9d8;
+        color: #2f9e44;
+    }
+    .slot-label {
+        position: static;
+        color: inherit;
+        font-size: 13px;
+        font-weight: 700;
+    }
+    .chips-grid { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+    .piece {
+        width: 100px; height: 100px; border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        cursor: grab;
+        user-select: none;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        color: #fff;
+        font-weight: 700;
+        text-align: center;
+        padding: 6px;
+        font-size: 15px;
+        letter-spacing: 1px;
+        touch-action: none;
+    }
+    .piece:active { cursor: grabbing; transform: scale(0.97); }
+    .piece.dragging { opacity: 0.55; }
+    .piece-label {
+        position: static;
+        text-align: center;
+        color: inherit;
+        font-size: 15px;
+        font-weight: 700;
+    }
+    .piece.used { opacity: 0.25; pointer-events: none; }
+    .piece[data-piece="huaban"] { background: linear-gradient(135deg,#ff8787,#e03131); }
+    .piece[data-piece="huaxin"] { background: linear-gradient(135deg,#ffd43b,#f59f00); }
+    .piece[data-piece="zhiye"]  { background: linear-gradient(135deg,#51cf66,#2f9e44); }
+    .piece[data-piece="ftou"]   { background: linear-gradient(135deg,#ffa94d,#e8590c); }
+    .piece[data-piece="fshen"]  { background: linear-gradient(135deg,#ffd43b,#f08c00); }
+    .piece[data-piece="fyi"]    { background: linear-gradient(135deg,#66d9e8,#0c8599); }
+    .piece[data-piece="fwei"]   { background: linear-gradient(135deg,#e599f7,#9c36b5); }
+    .piece[data-piece="ltou"]   { background: linear-gradient(135deg,#339af0,#1864ab); }
+    .piece[data-piece="lshen"]  { background: linear-gradient(135deg,#845ef7,#5f3dc4); }
+    .piece[data-piece="lzq"]    { background: linear-gradient(135deg,#51cf66,#2b8a3e); }
+    .piece[data-piece="lyq"]    { background: linear-gradient(135deg,#fcc419,#e67700); }
+    .piece[data-piece="lwei"]   { background: linear-gradient(135deg,#ff8787,#c92a2a); }
+    .piece[data-piece^="ci-"]  { font-size: 15px; border: 3px solid rgba(255,255,255,0.6); }
+    .piece[data-piece="ci-huaban"] { background: linear-gradient(135deg,#fa5252,#c92a2a); }
+    .piece[data-piece="ci-huaxin"] { background: linear-gradient(135deg,#fcc419,#e67700); }
+    .piece[data-piece="ci-zhiye"]  { background: linear-gradient(135deg,#40c057,#2b8a3e); }
+    .piece[data-piece="ci-ftou"]   { background: linear-gradient(135deg,#ff922b,#d9480f); }
+    .piece[data-piece="ci-fshen"]  { background: linear-gradient(135deg,#fab005,#b58300); }
+    .piece[data-piece="ci-fyi"]    { background: linear-gradient(135deg,#22b8cf,#0b7285); }
+    .piece[data-piece="ci-fwei"]   { background: linear-gradient(135deg,#cc5de8,#862e9c); }
+    .piece[data-piece="ci-ltou"]   { background: linear-gradient(135deg,#339af0,#1864ab); }
+    .piece[data-piece="ci-lshen"]  { background: linear-gradient(135deg,#9775fa,#5f3dc4); }
+    .piece[data-piece="ci-lzq"]    { background: linear-gradient(135deg,#51cf66,#2b8a3e); }
+    .piece[data-piece="ci-lyq"]    { background: linear-gradient(135deg,#ffd43b,#f59f00); }
+    .piece[data-piece="ci-lwei"]   { background: linear-gradient(135deg,#ff6b6b,#c92a2a); }
+
+    /* ========== 剪饶控力 ========== */
+    .ceramic {
+        margin: 10px auto 0;
+        display: flex;
+        justify-content: center;
+    }
+    .ceramic-box {
+        width: 140px; height: 140px; border-radius: 20px;
+        background: linear-gradient(135deg, #748ffc, #4c6ef5);
+        box-shadow: 0 10px 20px rgba(76,110,245,0.35);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff;
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-align: center;
+        padding: 14px;
+        transition: transform 0.15s;
+    }
+    .ceramic-box.pulse { transform: scale(1.06); }
+    .press-track {
+        height: 32px; margin: 24px auto 0;
+        border-radius: 16px;
+        position: relative; overflow: hidden;
+        border: 1px solid #dee2e6;
+        background: linear-gradient(90deg,
+            #adb5bd 0%, #adb5bd var(--gray-end, 30%),
+            #51cf66 var(--gray-end, 30%), #51cf66 var(--green-end, 70%),
+            #ff6b6b var(--green-end, 70%), #ff6b6b 100%);
+    }
+    .press-handle {
+        position: absolute; top: -4px; width: 6px; height: 40px;
+        background: #212529; border-radius: 3px;
+        left: 0; transform: translateX(-3px);
+        transition: left 0.08s linear;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .press-handle::after {
+        content: ''; position: absolute; top: -6px; left: 50%;
+        transform: translateX(-50%);
+        width: 0; height: 0;
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-bottom: 8px solid #212529;
+    }
+    .press-text { text-align: center; font-size: 13px; color: #495057; margin-top: 10px; font-weight: 500; }
+    .press-count { text-align: center; color: #4c6ef5; font-size: 14px; margin: 10px 0; font-weight: 700; letter-spacing: 2px; }
+    .longpress-btn {
+        width: 100%; padding: 18px; margin-top: 10px;
+        background: linear-gradient(135deg, #4c6ef5, #7048e8);
+        color: #fff; border-radius: 14px; font-size: 16px; border: none;
+        cursor: pointer; letter-spacing: 4px; font-weight: 700;
+        box-shadow: 0 8px 16px rgba(76,110,245,0.35);
+        user-select: none; touch-action: none;
+    }
+    .longpress-btn:active { background: linear-gradient(135deg, #364fc7, #5f3dc4); transform: translateY(1px); }
+
+    /* ========== 线条描摹 ========== */
+    .trace-wrap {
+        position: relative; width: 100%; aspect-ratio: 1 / 1;
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 16px;
+        border: 2px solid #dee2e6;
+        overflow: hidden;
+        touch-action: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06) inset;
+    }
+    #trace-canvas, #trace-overlay {
+        position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+    }
+    .trace-hint { text-align: center; margin-top: 10px; color: #868e96; font-size: 13px; }
+    .accuracy { text-align: center; font-size: 15px; color: #4c6ef5; margin-top: 8px; font-weight: 700; letter-spacing: 2px; }
+
+    /* ========== 通关页 ========== */
+    .finale { text-align: center; padding: 20px 12px; }
+    .finale-emoji {
+        width: 140px; height: 140px; margin: 0 auto;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #ffd43b, #fab005);
+        color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 30px; font-weight: 800; letter-spacing: 2px;
+        box-shadow: 0 12px 24px rgba(250,176,5,0.4);
+    }
+    .finale-title { font-size: 22px; color: #212529; margin: 14px 0 6px; letter-spacing: 3px; font-weight: 700; }
+    .finale-card {
+        margin: 16px auto; max-width: 340px; padding: 20px;
+        background: linear-gradient(160deg, #f8f9fa, #e9ecef);
+        border: 1px solid #dee2e6; border-radius: 16px;
+        box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+        color: #495057;
+    }
+    .finale-card .big {
+        display: block; margin-bottom: 8px;
+        font-size: 22px; font-weight: 700; color: #4c6ef5;
+    }
+
+    /* ========== 消息提示 ========== */
+    .toast {
+        position: fixed; left: 50%; top: 20px; transform: translateX(-50%);
+        background: rgba(33,37,41,0.92); color: #fff;
+        padding: 12px 22px; border-radius: 20px; font-size: 14px;
+        opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 100;
+        letter-spacing: 1px; box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+    .toast.show { opacity: 1; }
+
+    /* ========== 提示块 ========== */
+    .muted { color: #868e96; font-size: 13px; text-align: center; line-height: 1.8; }
+
+    /* ========== 清理旧的 tile/slot 配色，让彩色块上面的覆盖生效 ========== */
+    .slot.tile-slot { background: #e7f5ff; color: #1864ab; border-color: #74c0fc; }
+
+    /* ========== footer ========== */
+    .footer-text { text-align: center; color: #868e96; font-size: 12px; margin-top: 20px; letter-spacing: 1px; }
+
+    /* ========== 移动端（≤ 480px）微调 ========== */
+    @media (max-width: 480px) {
+        .piece, .slot { width: 78px; height: 78px; }
+        .piece { font-size: 30px; }
+        .piece-label { font-size: 10px; }
+        .longpress-btn { padding: 18px; font-size: 16px; }
+        .trace-wrap { aspect-ratio: 1 / 1; max-height: 72vh; }
+        h1 { font-size: 22px; letter-spacing: 1px; }
+        h2 { font-size: 18px; }
+        .card { padding: 16px; border-radius: 12px; }
+        .hero { padding: 22px 12px 16px; }
+    }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+ * 潮汕嵌瓷非遗体验小游戏
+ * 结构：home -> 选关 -> 6 步 -> finale -> 回选关
+ * =======================================================*/
+
+// ---------- 三关卡数据（隔离）----------
+const LEVELS = [
+    {
+        id: 1,
+        name: "新手",
+        title: "牡丹花",
+        emoji: "🌸",
+        difficulty: "★☆☆",
+        puzzleCount: 3,
+        pressCount: 3,
+        pressGreen: [25, 75],  // 绿区宽度 50%，新手友好
+        pressSpeed: 0.35,      // 每 16ms 增长，约 4.5 秒走满 0-100
+        rough: [
+            { id: 'huaban', label: '花瓣', emoji: '🌺' },
+            { id: 'huaxin', label: '花芯', emoji: '🌼' },
+            { id: 'zhiye', label: '枝叶', emoji: '🌿' }
+        ],
+        inlay: [
+            { id: 'ci-huaban', label: '瓷花瓣', emoji: '🔴' },
+            { id: 'ci-huaxin', label: '瓷花芯', emoji: '🟡' },
+            { id: 'ci-zhiye', label: '瓷枝叶', emoji: '🟢' }
+        ],
+        tileClass: 'tile-tile'
+    },
+    {
+        id: 2,
+        name: "普通",
+        title: "凤凰",
+        emoji: "🦅",
+        difficulty: "★★☆",
+        puzzleCount: 4,
+        pressCount: 4,
+        pressGreen: [35, 70],  // 绿区宽度 35%，中等难度
+        pressSpeed: 0.55,      // 约 2.9 秒走满，更考验反应
+        rough: [
+            { id: 'ftou', label: '凤头', emoji: '🐦' },
+            { id: 'fshen', label: '凤身', emoji: '🪶' },
+            { id: 'fyi', label: '双翼', emoji: '🕊️' },
+            { id: 'fwei', label: '凤尾', emoji: '🔥' }
+        ],
+        inlay: [
+            { id: 'ci-ftou', label: '瓷凤头', emoji: '🟠' },
+            { id: 'ci-fshen', label: '瓷凤身', emoji: '🟡' },
+            { id: 'ci-fyi', label: '瓷双翼', emoji: '🟤' },
+            { id: 'ci-fwei', label: '瓷凤尾', emoji: '🔴' }
+        ],
+        tileClass: 'tile-fenghuang'
+    },
+    {
+        id: 3,
+        name: "进阶",
+        title: "神龙",
+        emoji: "🐉",
+        difficulty: "★★★",
+        puzzleCount: 5,
+        pressCount: 5,
+        pressGreen: [45, 65],  // 绿区宽度 20%，真·高手区
+        pressSpeed: 0.85,     // 约 1.9 秒走满，极限挑战
+        rough: [
+            { id: 'ltou', label: '龙头', emoji: '🐲' },
+            { id: 'lshen', label: '龙身', emoji: '🌀' },
+            { id: 'lzq', label: '左前爪', emoji: '🦎' },
+            { id: 'lyq', label: '右前爪', emoji: '🦖' },
+            { id: 'lwei', label: '龙尾', emoji: '⚡' }
+        ],
+        inlay: [
+            { id: 'ci-ltou', label: '瓷龙头', emoji: '🔵' },
+            { id: 'ci-lshen', label: '瓷龙身', emoji: '🟣' },
+            { id: 'ci-lzq', label: '瓷左爪', emoji: '🟢' },
+            { id: 'ci-lyq', label: '瓷右爪', emoji: '🟡' },
+            { id: 'ci-lwei', label: '瓷龙尾', emoji: '🔴' }
+        ],
+        tileClass: 'tile-long'
+    }
+];
+
+// ---------- 全局状态 ----------
+let state = {
+    screen: 'home',      // home | level | s2 | s3 | s4 | s5 | s6 | finale
+    level: null,           // 当前选中的关卡对象
+    progress: []           // 已完成步骤 [s2,s3,s4,s5,s6] （用于步骤锁死）
+};
+
+const app = document.getElementById('app');
+const toastEl = document.getElementById('toast');
+
+function toast(msg, ms = 1500) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toastEl.classList.remove('show'), ms);
+}
+
+function stepDots(current) {
+    // current: 1..6
+    let out = '<div class="steps">';
+    const names = ['图纸规划','调配灰浆','骨架粗坯','剪饶控力','瓷片镶嵌','线条修整'];
+    for (let i = 0; i < 6; i++) {
+        let cls = 'dot';
+        if (i + 1 < current) cls += ' done';
+        else if (i + 1 === current) cls += ' active';
+        out += `<div class="${cls}" title="${names[i]}"></div>`;
+    }
+    out += '</div>';
+    return out;
+}
+
+function topBar(title, backTarget, stepLabel, stepCurrent) {
+    return `
+      <div class="top-bar">
+        <button class="back-btn" onclick="go('${backTarget}')">← 返回</button>
+        <div class="step-label">${stepLabel}</div>
+        <div style="width:60px"></div>
+      </div>
+      ${stepDots(stepCurrent)}
+    `;
+}
+
+// ---------- 路由 ----------
+function go(screen, opts = {}) {
+    state.screen = screen;
+    if (opts.level !== undefined) state.level = opts.level;
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function render() {
+    switch (state.screen) {
+        case 'home': return renderHome(); break;
+        case 'level': return renderLevelSelect(); break;
+        case 's2': return renderS2(); break;
+        case 's3': return renderS3(); break;
+        case 's4': return renderS4(); break;
+        case 's5': return renderS5(); break;
+        case 's6': return renderS6(); break;
+        case 'finale': return renderFinale(); break;
+    }
+}
+
+// =========================================================
+// 首页
+// =========================================================
+function renderHome() {
+    app.innerHTML = `
+        <div class="hero">
+            <div class="emoji-big">潮汕嵌瓷</div>
+            <h1>非遗手工体验</h1>
+            <div class="subtitle">CHAOSHAN · QIANCI CRAFT</div>
+        </div>
+
+        <div class="card">
+            <h2>关于嵌瓷</h2>
+            <p>潮汕嵌瓷是潮汕国家级非遗手工艺，俗称<strong>贴饶、剪饶</strong>。古人利用彩色碎瓷片修剪拼接，搭配特制灰浆塑形，装饰祠堂、庙宇屋脊。瓷片耐晒防水、百年不褪色，常制作花卉、瑞兽、祥龙等吉祥图案，是极具潮汕特色的传统匠心艺术。</p>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn" onclick="go('level')">开始体验 →</button>
+        </div>
+
+        <div class="footer-text">共 3 个关卡 · 每关 6 道工序</div>
+    `;
+}
+
+// =========================================================
+// 关卡选择
+// =========================================================
+function renderLevelSelect() {
+    let cards = LEVELS.map(lv => `
+        <div class="level level-${lv.id}" onclick="startLevel(${lv.id})">
+            <div class="ltitle">${lv.title}</div>
+            <div class="lmeta">
+                ${lv.name} · ${lv.difficulty}<br>
+                拼图 ${lv.puzzleCount} 块<br>
+                剪饶 ${lv.pressCount} 次
+            </div>
+        </div>
+    `).join('');
+
+    app.innerHTML = `
+        ${topBar('选择图纸', 'home', '第一步 · 图纸规划', 1)}
+        <div class="card">
+            <h2>第一步 · 图纸规划</h2>
+            <p class="muted">选择一张图纸开始体验。不同难度将决定后续每一步的模块数量与力度区间宽度。</p>
+            <div class="levels">${cards}</div>
+        </div>
+    `;
+}
+
+function startLevel(id) {
+    state.level = LEVELS.find(l => l.id === id);
+    state.progress = [];
+    go('s2');
+}
+
+// =========================================================
+// 第二步 · 调配灰浆
+// =========================================================
+// 正确比例：贝壳灰 4 : 纸筋 2 : 红糖 1
+// =========================================================
+function renderS2() {
+    const lv = state.level;
+    app.innerHTML = `
+        ${topBar('调配灰浆 · ' + lv.title, 'level', '第二步 · 调配灰浆', 2)}
+        <div class="card">
+            <h2>第二步 · 调配灰浆</h2>
+            <p class="muted">传统嵌瓷专用灰浆：<br><strong>贝壳灰 4 : 纸筋 2 : 红糖 1</strong><br>依次点击投料，凑齐精准份数。</p>
+
+            <div class="mortar">
+                <div class="mix"></div>
+                <div class="mix-label">灰浆搅拌桶</div>
+            </div>
+
+            <div class="chips" id="chips">
+                <div class="chip chip-shell" onclick="addIngredient('shell')">贝壳灰 +1</div>
+                <div class="chip chip-paper" onclick="addIngredient('paper')">纸筋 +1</div>
+                <div class="chip chip-sugar" onclick="addIngredient('sugar')">红糖 +1</div>
+            </div>
+
+            <div class="recipe" id="recipe">
+                <div class="recipe-item rec-shell">贝壳灰<div class="count" id="c-shell">0</div></div>
+                <div class="recipe-item rec-paper">纸筋<div class="count" id="c-paper">0</div></div>
+                <div class="recipe-item rec-sugar">红糖<div class="count" id="c-sugar">0</div></div>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn ghost" onclick="resetMortar()">重置</button>
+                <button class="btn" id="submit-mortar" onclick="submitMortar()" disabled>配比完成后解锁</button>
+            </div>
+            <p class="muted" style="margin-top:10px" id="mortar-hint">目标：4 : 2 : 1</p>
+        </div>
+    `;
+    mortarState = { shell: 0, paper: 0, sugar: 0 };
+    updateMortar();
+}
+
+let mortarState = { shell: 0, paper: 0, sugar: 0 };
+
+function addIngredient(key) {
+    mortarState[key] = (mortarState[key] || 0) + 1;
+    updateMortar();
+}
+
+function resetMortar() {
+    mortarState = { shell: 0, paper: 0, sugar: 0 };
+    updateMortar();
+}
+
+function updateMortar() {
+    document.getElementById('c-shell').textContent = mortarState.shell;
+    document.getElementById('c-paper').textContent = mortarState.paper;
+    document.getElementById('c-sugar').textContent = mortarState.sugar;
+
+    const ok = mortarState.shell === 4 && mortarState.paper === 2 && mortarState.sugar === 1;
+    const btn = document.getElementById('submit-mortar');
+    btn.disabled = !ok;
+    btn.textContent = ok ? '✓ 配比完成，进入下一步 →' : '配比完成后解锁';
+}
+
+function submitMortar() {
+    toast('灰浆调配完成！');
+    state.progress.push('s2');
+    go('s3');
+}
+
+// =========================================================
+// 第三步 · 骨架粗坯拼图
+// =========================================================
+// 通用：右侧轮廓槽 + 左侧碎片，拖拽吸附
+// =========================================================
+function renderS3() {
+    const lv = state.level;
+    const slotsHtml = lv.rough.map(s => `
+        <div class="slot hint tile-slot" data-slot="${s.id}">
+            <span class="slot-label">${s.label}</span>
+        </div>
+    `).join('');
+
+    // 随机打乱碎片
+    const shuffled = [...lv.rough].sort(() => Math.random() - 0.5);
+    const piecesHtml = shuffled.map(s => `
+        <div class="piece piece-${s.id}" draggable="true" data-piece="${s.id}">
+            <span class="piece-label">${s.label}</span>
+        </div>
+    `).join('');
+
+    app.innerHTML = `
+        ${topBar('搭建粗坯 · ' + lv.title, 'level', '第三步 · 骨架粗坯', 3)}
+        <div class="card">
+            <h2>第三步 · 搭建粗坯</h2>
+            <p class="muted">拖拽左侧碎片到右侧轮廓中，将各部件摆放到对应位置。</p>
+
+            <div class="puzzle-wrap">
+                <div class="puzzle-pool">
+                    <div class="board-title">散落碎片</div>
+                    <div class="chips-grid" id="pool">${piecesHtml}</div>
+                </div>
+                <div class="puzzle-board">
+                    <div class="board-title">轮廓位置（共 ${lv.puzzleCount} 处）</div>
+                    <div class="slots" id="slots">${slotsHtml}</div>
+                </div>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn ghost" onclick="go('s3')">↻ 重来</button>
+                <button class="btn" id="btn-next" disabled onclick="finishRough()">完成 →</button>
+            </div>
+            <p class="muted" style="margin-top:8px" id="puzzle-hint">全部拼对后可进入下一步</p>
+        </div>
+    `;
+
+    attachDragDrop('rough', lv.rough.map(r => r.id));
+}
+
+function finishRough() {
+    toast('骨架粗坯完成！');
+    state.progress.push('s3');
+    go('s4');
+}
+
+// ---------- 拖拽通用引擎 ----------
+function attachDragDrop(type, slotIdList) {
+    const pieces = document.querySelectorAll('.piece[draggable=true]');
+    const slots = document.querySelectorAll('.slot[data-slot]');
+    const total = slotIdList.length;
+    let placed = new Set();
+    let draggingPiece = null;
+
+    pieces.forEach(piece => {
+        piece.addEventListener('dragstart', (e) => {
+            draggingPiece = piece;
+            piece.classList.add('dragging');
+            try { e.dataTransfer.setData('text/plain', piece.dataset.piece); } catch (_) {}
+        });
+        piece.addEventListener('dragend', () => piece.classList.remove('dragging'));
+
+        // 触屏支持
+        let touchGhost = null;
+        piece.addEventListener('touchstart', (e) => {
+            draggingPiece = piece;
+            const t = e.touches[0];
+            touchGhost = piece.cloneNode(true);
+            touchGhost.style.position = 'fixed';
+            touchGhost.style.left = (t.clientX - 40) + 'px';
+            touchGhost.style.top = (t.clientY - 40) + 'px';
+            touchGhost.style.pointerEvents = 'none';
+            touchGhost.style.opacity = '0.85';
+            touchGhost.style.zIndex = '999';
+            document.body.appendChild(touchGhost);
+            piece.classList.add('dragging');
+            e.preventDefault();
+        }, { passive: false });
+        piece.addEventListener('touchmove', (e) => {
+            if (!touchGhost) return;
+            const t = e.touches[0];
+            touchGhost.style.left = (t.clientX - 40) + 'px';
+            touchGhost.style.top = (t.clientY - 40) + 'px';
+            const el = document.elementFromPoint(t.clientX, t.clientY);
+            slots.forEach(s => s.classList.remove('over'));
+            if (el && el.closest && el.closest('.slot')) el.closest('.slot').classList.add('over');
+            e.preventDefault();
+        }, { passive: false });
+        piece.addEventListener('touchend', (e) => {
+            if (!touchGhost) return;
+            const t = e.changedTouches[0];
+            const el = document.elementFromPoint(t.clientX, t.clientY);
+            const slot = el && el.closest && el.closest('.slot');
+            slots.forEach(s => s.classList.remove('over'));
+            if (draggingPiece && slot) handleDrop(draggingPiece, slot);
+            if (touchGhost && touchGhost.parentNode) touchGhost.parentNode.removeChild(touchGhost);
+            touchGhost = null;
+            piece.classList.remove('dragging');
+        });
+    });
+
+    slots.forEach(slot => {
+        slot.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            slot.classList.add('over');
+        });
+        slot.addEventListener('dragleave', () => slot.classList.remove('over'));
+        slot.addEventListener('drop', (e) => {
+            e.preventDefault();
+            slot.classList.remove('over');
+            if (draggingPiece) handleDrop(draggingPiece, slot);
+        });
+    });
+
+    function handleDrop(pieceEl, slotEl) {
+        const pieceId = pieceEl.dataset.piece;
+        const slotId = slotEl.dataset.slot;
+        if (pieceId !== slotId) {
+            toast('位置不对，再试试');
+            return;
+        }
+        if (slotEl.classList.contains('filled')) return;
+
+        slotEl.classList.add('filled');
+        slotEl.innerHTML = pieceEl.innerHTML;
+        slotEl.querySelector('.piece-label').textContent = slotEl.querySelector('.piece-label') ? slotEl.querySelector('.piece-label').textContent : '';
+        pieceEl.classList.add('used');
+        placed.add(slotId);
+
+        if (placed.size === total) {
+            const btn = document.getElementById('btn-next');
+            if (btn) btn.disabled = false;
+            const hint = document.getElementById('puzzle-hint');
+            if (hint) hint.textContent = '✓ 全部对齐完成！';
+        }
+    }
+}
+
+// =========================================================
+// 第四步 · 剪饶控力（长按 + 三段式进度条）
+// =========================================================
+function renderS4() {
+    const lv = state.level;
+    const [gStart, gEnd] = lv.pressGreen;
+
+    app.innerHTML = `
+        ${topBar('剪饶控力 · ' + lv.title, 'level', '第四步 · 剪饶控力', 4)}
+        <div class="card">
+            <h2>第四步 · 剪饶控力</h2>
+            <p class="muted">长按下方按钮，控制力度停在绿色合格区。<br>灰色=不足，绿色=合格，红色=过大。</p>
+
+            <div class="ceramic"><div class="ceramic-box" id="ceramic">彩色瓷片<br>待剪裁</div></div>
+
+            <div class="press-track" id="press-track"
+                 style="--gray-end:${gStart}%; --green-end:${gEnd}%;">
+                <div class="press-handle" id="press-handle"></div>
+            </div>
+            <div class="press-text" id="press-text">长按按钮开始…</div>
+            <div class="press-count" id="press-count">成功 0 / ${lv.pressCount} 次</div>
+
+            <button class="longpress-btn" id="press-btn">长按控力</button>
+
+            <div class="btn-row">
+                <button class="btn" id="btn-next-s4" disabled onclick="finishPress()">进入下一步 →</button>
+            </div>
+        </div>
+    `;
+
+    // 交互
+    const btn = document.getElementById('press-btn');
+    const handle = document.getElementById('press-handle');
+    const ceramic = document.getElementById('ceramic');
+    const text = document.getElementById('press-text');
+    const countEl = document.getElementById('press-count');
+    const nextBtn = document.getElementById('btn-next-s4');
+
+    let successCount = 0;
+    let progress = 0;
+    let timer = null;
+    let pressing = false;
+
+    function tick() {
+        progress += lv.pressSpeed;
+        if (progress >= 100) progress = 100;
+        handle.style.left = progress + '%';
+    }
+
+    btn.addEventListener('mousedown', start);
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); start(); }, { passive: false });
+    document.addEventListener('mouseup', stop);
+    document.addEventListener('touchend', stop);
+
+    function start() {
+        if (pressing) return;
+        // 每次新一次尝试都从 0 开始
+        progress = 0;
+        handle.style.left = '0%';
+        pressing = true;
+        ceramic.classList.add('pulse');
+        text.textContent = '正在控力…松手停在绿色区间';
+        timer = setInterval(tick, 16);
+    }
+
+    function stop() {
+        if (!pressing) return;
+        pressing = false;
+        clearInterval(timer);
+        ceramic.classList.remove('pulse');
+
+        if (progress >= gStart && progress <= gEnd) {
+            successCount++;
+            toast('✓ 成功一次！');
+            text.textContent = '完美控力！再按一次继续。';
+        } else if (progress < gStart) {
+            toast('力度不足');
+            text.textContent = '松手太早，瓷片还没剪到位，长按再试。';
+        } else {
+            toast('力度过大');
+            text.textContent = '力度过猛，瓷片剪碎了！轻一点再试。';
+        }
+
+        countEl.textContent = `成功 ${successCount} / ${lv.pressCount} 次`;
+        if (successCount >= lv.pressCount) {
+            nextBtn.disabled = false;
+            text.textContent = '剪饶次数集齐，可以进入下一步。';
+        }
+    }
+}
+
+function finishPress() {
+    toast('剪饶完成！');
+    state.progress.push('s4');
+    go('s5');
+}
+
+// =========================================================
+// 第五步 · 瓷片镶嵌（再次拼图，与第三步逻辑一致）
+// =========================================================
+function renderS5() {
+    const lv = state.level;
+    const slotsHtml = lv.inlay.map(s => `
+        <div class="slot hint tile-slot" data-slot="${s.id}">
+            <span class="slot-label">${s.label}</span>
+        </div>
+    `).join('');
+
+    const shuffled = [...lv.inlay].sort(() => Math.random() - 0.5);
+    const piecesHtml = shuffled.map(s => `
+        <div class="piece piece-${s.id}" draggable="true" data-piece="${s.id}">
+            <span class="piece-label">${s.label}</span>
+        </div>
+    `).join('');
+
+    app.innerHTML = `
+        ${topBar('瓷片镶嵌 · ' + lv.title, 'level', '第五步 · 瓷片镶嵌', 5)}
+        <div class="card">
+            <h2>第五步 · 瓷片镶嵌</h2>
+            <p class="muted">将彩色瓷片碎片镶嵌到粗坯对应位置。</p>
+
+            <div class="puzzle-wrap">
+                <div class="puzzle-pool">
+                    <div class="board-title">彩色瓷片</div>
+                    <div class="chips-grid" id="pool">${piecesHtml}</div>
+                </div>
+                <div class="puzzle-board">
+                    <div class="board-title">镶嵌位置（共 ${lv.puzzleCount} 处）</div>
+                    <div class="slots" id="slots">${slotsHtml}</div>
+                </div>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn ghost" onclick="go('s5')">↻ 重来</button>
+                <button class="btn" id="btn-next" disabled onclick="finishInlay()">完成 →</button>
+            </div>
+            <p class="muted" style="margin-top:8px" id="puzzle-hint">全部镶嵌完成可进入下一步</p>
+        </div>
+    `;
+
+    attachDragDrop('inlay', lv.inlay.map(r => r.id));
+}
+
+function finishInlay() {
+    toast('瓷片镶嵌完成！');
+    state.progress.push('s5');
+    go('s6');
+}
+
+// =========================================================
+// 第六步 · 线条描摹修整
+// =========================================================
+function renderS6() {
+    const lv = state.level;
+    app.innerHTML = `
+        ${topBar('线条修整 · ' + lv.title, 'level', '第六步 · 线条修整', 6)}
+        <div class="card">
+            <h2>第六步 · 线条描摹修整</h2>
+            <p class="muted">顺着虚线轨迹描摹一遍，模拟匠人补缝、修边、整形。贴合度越高，作品越精美。</p>
+
+            <div class="trace-wrap" id="trace-wrap">
+                <svg id="trace-overlay"></svg>
+                <canvas id="trace-canvas"></canvas>
+            </div>
+            <div class="accuracy" id="trace-accuracy">贴合度：--%</div>
+            <div class="trace-hint">用鼠标 / 手指 沿着虚线一笔画完</div>
+
+            <div class="btn-row">
+                <button class="btn ghost" onclick="go('s6')">↻ 重新描摹</button>
+                <button class="btn" id="btn-trace-next" disabled onclick="finishTrace()">完成 →</button>
+            </div>
+        </div>
+    `;
+
+    setupTrace(lv);
+}
+
+function setupTrace(lv) {
+    const wrap = document.getElementById('trace-wrap');
+    const svg = document.getElementById('trace-overlay');
+    const canvas = document.getElementById('trace-canvas');
+    const accEl = document.getElementById('trace-accuracy');
+    const nextBtn = document.getElementById('btn-trace-next');
+
+    function sizeCanvas() {
+        const rect = wrap.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+    }
+    sizeCanvas();
+    window.addEventListener('resize', sizeCanvas);
+
+    // 生成一条闭合的花/凤/龙的简化轮廓
+    function buildPath(w, h, type) {
+        // 返回SVG的路径点（用于虚线）
+        const cx = w / 2, cy = h / 2;
+        let pts = [];
+        if (type === '牡丹花') {
+            // 花瓣形：6 个凸起
+            for (let i = 0; i <= 120; i++) {
+                const t = (i / 120) * Math.PI * 2;
+                const r = Math.min(w, h) * (0.28 + 0.15 * Math.cos(6 * t));
+                pts.push([cx + Math.cos(t) * r, cy + Math.sin(t) * r]);
+            }
+        } else if (type === '凤凰') {
+            // 椭圆 + 尖尾
+            for (let i = 0; i <= 120; i++) {
+                const t = i / 120;
+                const x = w * (0.15 + t * 0.7);
+                const y = cy + Math.sin(t * Math.PI) * h * 0.25
+                        + Math.sin(t * Math.PI * 3) * h * 0.05;
+                pts.push([x, y]);
+            }
+        } else {
+            // 龙：波浪线
+            for (let i = 0; i <= 160; i++) {
+                const t = i / 160;
+                const x = w * (0.1 + t * 0.8);
+                const y = cy + Math.sin(t * Math.PI * 4) * h * 0.2;
+                pts.push([x, y]);
+            }
+        }
+        return pts;
+    }
+
+    const pts = buildPath(canvas.width, canvas.height, lv.title);
+
+    // 画虚线
+    svg.setAttribute('width', canvas.width);
+    svg.setAttribute('height', canvas.height);
+    svg.setAttribute('viewBox', `0 0 ${canvas.width} ${canvas.height}`);
+    const pathD = 'M ' + pts.map(p => p.map(v => v.toFixed(1)).join(' ')).join(' L ');
+    svg.innerHTML = `<path d="${pathD}" fill="none" stroke="#c89c6c" stroke-width="3" stroke-dasharray="6 8"/>`;
+
+    // canvas 画笔
+    const ctx = canvas.getContext('2d');
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(122, 79, 45, 0.9)';
+
+    let drawing = false;
+    let tracedPath = [];
+    // 容差像素：画布短边的 8%
+    const tolerance = Math.min(canvas.width, canvas.height) * 0.08;
+    // 已被轨迹覆盖的路径点（索引集合）
+    let coveredIdx = new Set();
+
+    function dist(ax, ay, bx, by) {
+        const dx = ax - bx, dy = ay - by;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    // 找到给定坐标离路径最近的点的索引
+    function nearestIdx(x, y) {
+        let min = Infinity, idx = -1;
+        for (let i = 0; i < pts.length; i++) {
+            const d = dist(pts[i][0], pts[i][1], x, y);
+            if (d < min) { min = d; idx = i; }
+        }
+        return { idx, dist: min };
+    }
+
+    function handleStart(e) {
+        drawing = true;
+        const pos = posOf(e);
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+        tracedPath = [{ x: pos.x, y: pos.y, t: Date.now() }];
+        coveredIdx = new Set();
+        nextBtn.disabled = true;
+        accEl.textContent = '贴合度：计算中…';
+    }
+    function handleMove(e) {
+        if (!drawing) return;
+        const pos = posOf(e);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+
+        const near = nearestIdx(pos.x, pos.y);
+        if (near.dist <= tolerance) {
+            // 覆盖附近一段路径，避免单点跳跃造成漏判
+            const spread = 3;
+            for (let k = -spread; k <= spread; k++) {
+                const i = near.idx + k;
+                if (i >= 0 && i < pts.length) coveredIdx.add(i);
+            }
+        }
+        tracedPath.push({ x: pos.x, y: pos.y, t: Date.now() });
+
+        // 实时贴合度 = 已覆盖路径点 / 总路径点
+        const coverage = Math.round((coveredIdx.size / pts.length) * 100);
+        accEl.textContent = `贴合度：${coverage}%`;
+    }
+    function handleEnd() {
+        if (!drawing) return;
+        drawing = false;
+
+        // 综合分数：
+        // - 覆盖率（路径点被覆盖的比例）: 60% 权重
+        // - 贴合度（轨迹点离路径的平均距离的反向）: 40% 权重
+        let hitCount = 0;
+        let totalDist = 0;
+        for (let i = 0; i < tracedPath.length; i++) {
+            const near = nearestIdx(tracedPath[i].x, tracedPath[i].y);
+            totalDist += near.dist;
+            if (near.dist <= tolerance) hitCount++;
+        }
+        const coverage = coveredIdx.size / pts.length;
+        const accuracy = tracedPath.length ? (hitCount / tracedPath.length) : 0;
+        const score = Math.round((coverage * 0.6 + accuracy * 0.4) * 100);
+
+        accEl.textContent = `贴合度：${score}%（覆盖 ${Math.round(coverage * 100)}% · 精度 ${Math.round(accuracy * 100)}%）`;
+        if (score >= 75) {
+            nextBtn.disabled = false;
+            toast('✓ 修整完成！');
+        } else {
+            toast(`贴合度 ${score}%，再沿虚线描一次`);
+        }
+    }
+
+    function posOf(e) {
+        const rect = canvas.getBoundingClientRect();
+        const t = e.touches ? e.touches[0] : e;
+        return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+    }
+
+    canvas.addEventListener('mousedown', handleStart);
+    canvas.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleEnd);
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleStart(e); }, { passive: false });
+    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e); }, { passive: false });
+    canvas.addEventListener('touchend', handleEnd);
+}
+
+function finishTrace() {
+    toast('线条修整完成！');
+    state.progress.push('s6');
+    go('finale');
+}
+
+// =========================================================
+// 通关结算
+// =========================================================
+function renderFinale() {
+    const lv = state.level;
+    app.innerHTML = `
+        ${topBar('通关 · ' + lv.title, 'level', '第六步完成', 6)}
+        <div class="card finale">
+            <div class="finale-emoji">🏆</div>
+            <div class="finale-title">恭喜你完成潮汕嵌瓷非遗手工体验！</div>
+            <div class="finale-card">
+                <div class="big">完成作品：${lv.title}</div>
+                <div style="margin-top:8px;font-size:16px;color:#7a4f2d;font-weight:600;">
+                    ${lv.name} · ${lv.difficulty}
+                </div>
+                <div style="color:#a87746;font-size:13px;margin-top:6px;">
+                    共 6 道工序，全部完成
+                </div>
+            </div>
+            <div class="btn-row">
+                <button class="btn ghost" onclick="go('home')">返回首页</button>
+                <button class="btn" onclick="go('level')">选择其它图纸</button>
+            </div>
+            <p class="muted" style="margin-top:14px;">
+                嵌瓷以碎瓷为墨，屋脊为纸，以匠心绘就潮汕百年文化。
+            </p>
+        </div>
+    `;
+}
+
+// ---------- 启动 ----------
+render();
+</script>
+</body>
+</html>

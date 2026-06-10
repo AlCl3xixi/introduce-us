@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="三下乡团队介绍网页">
+    <meta name="theme-color" content="#ffffff">
+    <title>三下乡团队网页</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="site-header">
+        <nav class="nav-container">
+            <div class="nav-logo">团队主页</div>
+            <button class="nav-toggle" id="navToggle" aria-label="菜单">
+                <span></span><span></span><span></span>
+            </button>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="#project">项目介绍</a></li>
+                <li><a href="#team">团队介绍</a></li>
+                <li><a href="#gallery">图片展示</a></li>
+                <li><a href="#culture">嵌瓷文化</a></li>
+                <li><a href="#game">H5小游戏</a></li>
+                <li><a href="#lora" class="nav-lora">LoRA体验</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section id="project" class="section">
+            <div class="section-inner">
+                <h2 class="section-title">项目介绍</h2>
+                <div class="section-content placeholder-block">
+                    <p class="placeholder-text">【此处填写项目介绍正文。可包含项目背景、实践主题、实践时间地点、意义等。建议 300~500 字。】</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="team" class="section section-alt">
+            <div class="section-inner">
+                <h2 class="section-title">团队介绍</h2>
+                <div class="section-content">
+                    <div class="team-grid" id="teamGrid">
+                        <div class="team-card placeholder-block">
+                            <div class="team-avatar placeholder-img">头像</div>
+                            <h3 class="team-name">【姓名】</h3>
+                            <p class="team-role">【角色/职务】</p>
+                            <p class="team-bio">【个人简介，一句话】</p>
+                        </div>
+                        <div class="team-card placeholder-block">
+                            <div class="team-avatar placeholder-img">头像</div>
+                            <h3 class="team-name">【姓名】</h3>
+                            <p class="team-role">【角色/职务】</p>
+                            <p class="team-bio">【个人简介，一句话】</p>
+                        </div>
+                        <div class="team-card placeholder-block">
+                            <div class="team-avatar placeholder-img">头像</div>
+                            <h3 class="team-name">【姓名】</h3>
+                            <p class="team-role">【角色/职务】</p>
+                            <p class="team-bio">【个人简介，一句话】</p>
+                        </div>
+                        <div class="team-card placeholder-block">
+                            <div class="team-avatar placeholder-img">头像</div>
+                            <h3 class="team-name">【姓名】</h3>
+                            <p class="team-role">【角色/职务】</p>
+                            <p class="team-bio">【个人简介，一句话】</p>
+                        </div>
+                    </div>
+                    <p class="section-hint">提示：在 <code>js/main.js</code> 的 <code>teamMembers</code> 数组中配置真实队员，图片放到 <code>images/team/</code> 目录。</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="gallery" class="section">
+            <div class="section-inner">
+                <h2 class="section-title">图片展示</h2>
+                <p class="section-hint">约 50 张高清图片，支持点击放大查看。</p>
+                <div class="gallery-grid" id="galleryGrid"></div>
+                <p class="section-hint">提示：将图片放入 <code>images/gallery/</code> 目录，文件名命名为 <code>1.jpg, 2.jpg ...</code> 或在 <code>js/main.js</code> 的 <code>galleryImages</code> 数组中配置。</p>
+            </div>
+        </section>
+
+        <section id="culture" class="section section-alt">
+            <div class="section-inner">
+                <h2 class="section-title">嵌瓷文化简介</h2>
+                <div class="section-content">
+                    <div class="culture-grid">
+                        <div class="culture-text placeholder-block">
+                            <p class="placeholder-text">【此处填写嵌瓷文化介绍。可包括历史渊源、工艺特点、代表作品、地域文化等。建议 500~800 字，分 3~5 个段落。】</p>
+                        </div>
+                        <div class="culture-image placeholder-img">【嵌瓷文化配图】</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="game" class="section">
+            <div class="section-inner">
+                <h2 class="section-title">H5 小游戏</h2>
+                <div class="section-content game-entry">
+                    <a href="game/fix_game.html" class="game-card">
+                        <div class="game-icon">🎮</div>
+                        <h3>进入小游戏</h3>
+                        <p>【点击进入小游戏入口，具体游戏内容由 <code>game/fix_game.html</code> 实现。】</p>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section id="lora" class="section section-alt">
+            <div class="section-inner">
+                <h2 class="section-title">AI 生图体验</h2>
+                <p class="section-hint section-hint-muted">仅本机可用 · 需本地启动 WebUI 并开放 API</p>
+
+                <!-- Tab 切换：参考你给的截图，底部蓝线风格 -->
+                <div class="tab-bar" id="tabBar">
+                    <button class="tab-btn active" data-tab="txt2img">文生图</button>
+                    <button class="tab-btn" data-tab="img2img">图生图</button>
+                </div>
+
+                <div class="tab-panel active" data-tab="txt2img">
+                    <form class="gen-form" onsubmit="return false;">
+                        <div class="field-grid">
+                            <div class="field field-span-2">
+                                <label for="p-prompt">正向提示词 (Prompt)</label>
+                                <textarea id="p-prompt" rows="3" placeholder="例: a photo of &lt;lora:xxx&gt;, masterpiece, best quality, highly detailed"></textarea>
+                            </div>
+                            <div class="field field-span-2">
+                                <label for="p-negative">负向提示词 (Negative)</label>
+                                <textarea id="p-negative" rows="2">lowres, bad anatomy, bad hands, text, error, cropped, worst quality, blurry</textarea>
+                            </div>
+
+                            <div class="field">
+                                <label for="p-steps">采样步数</label>
+                                <input type="number" id="p-steps" value="30" min="1" max="150">
+                            </div>
+                            <div class="field">
+                                <label for="p-cfg">CFG Scale</label>
+                                <input type="number" id="p-cfg" value="7" min="1" max="30" step="0.5">
+                            </div>
+                            <div class="field">
+                                <label for="p-width">宽度</label>
+                                <input type="number" id="p-width" value="512" step="8">
+                            </div>
+                            <div class="field">
+                                <label for="p-height">高度</label>
+                                <input type="number" id="p-height" value="512" step="8">
+                            </div>
+
+                            <div class="field">
+                                <label for="p-sampler">采样器</label>
+                                <input type="text" id="p-sampler" value="Euler a">
+                            </div>
+                            <div class="field">
+                                <label for="p-scheduler">调度器</label>
+                                <input type="text" id="p-scheduler" value="automatic">
+                            </div>
+                            <div class="field">
+                                <label for="p-batch">单批张数</label>
+                                <input type="number" id="p-batch" value="1" min="1" max="8">
+                            </div>
+                            <div class="field">
+                                <label for="p-iter">批次数量</label>
+                                <input type="number" id="p-iter" value="1" min="1" max="8">
+                            </div>
+
+                            <div class="field">
+                                <label for="p-seed">随机种子 seed (-1 = 随机)</label>
+                                <input type="number" id="p-seed" value="-1">
+                            </div>
+                            <div class="field field-check">
+                                <label><input type="checkbox" id="p-restore"> 人脸修复</label>
+                            </div>
+                            <div class="field field-check">
+                                <label><input type="checkbox" id="p-hr"> 高清修复 (Hires. fix)</label>
+                            </div>
+                            <div class="field field-check">
+                                <label><input type="checkbox" id="p-save"> 保存到 WebUI 输出目录</label>
+                            </div>
+                        </div>
+
+                        <div class="field-grid hr-panel" id="p-hr-panel" style="display:none;">
+                            <div class="field">
+                                <label for="p-hr-scale">放大倍数</label>
+                                <input type="number" id="p-hr-scale" value="2" min="1" max="4" step="0.1">
+                            </div>
+                            <div class="field">
+                                <label for="p-hr-upscaler">放大模型</label>
+                                <input type="text" id="p-hr-upscaler" value="ESRGAN_4x">
+                            </div>
+                            <div class="field">
+                                <label for="p-hr-steps">二阶段步数 (0=同步数)</label>
+                                <input type="number" id="p-hr-steps" value="0" min="0" max="100">
+                            </div>
+                            <div class="field">
+                                <label for="p-hr-denoise">去噪强度</label>
+                                <input type="number" id="p-hr-denoise" value="0.4" min="0" max="1" step="0.05">
+                            </div>
+                        </div>
+
+                        <div class="btn-row">
+                            <button type="button" class="btn-primary" id="p-generate">生成图片</button>
+                            <span class="status-text" id="p-status"></span>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="tab-panel" data-tab="img2img">
+                    <form class="gen-form" onsubmit="return false;">
+
+                        <!-- 图片上传区 -->
+                        <div class="upload-grid" style="grid-template-columns: 1fr;">
+                            <label class="upload-box" for="i-init">
+                                <span class="upload-title">底图 (init_images)</span>
+                                <span class="upload-hint">点击或拖拽图片到这里</span>
+                                <input type="file" id="i-init" accept="image/*" hidden>
+                                <div class="upload-preview" id="i-init-preview"></div>
+                            </label>
+                        </div>
+
+                        <div class="field-grid">
+                            <div class="field field-span-2">
+                                <label for="i-prompt">正向提示词 (Prompt)</label>
+                                <textarea id="i-prompt" rows="3" placeholder="例: a photo of &lt;lora:xxx&gt;, masterpiece, best quality"></textarea>
+                            </div>
+                            <div class="field field-span-2">
+                                <label for="i-negative">负向提示词 (Negative)</label>
+                                <textarea id="i-negative" rows="2">lowres, bad anatomy, bad hands, text, error, cropped, worst quality, blurry</textarea>
+                            </div>
+
+                            <div class="field">
+                                <label for="i-steps">采样步数</label>
+                                <input type="number" id="i-steps" value="30" min="1" max="150">
+                            </div>
+                            <div class="field">
+                                <label for="i-cfg">CFG Scale</label>
+                                <input type="number" id="i-cfg" value="7" min="1" max="30" step="0.5">
+                            </div>
+                            <div class="field">
+                                <label for="i-width">宽度</label>
+                                <input type="number" id="i-width" value="768" step="8">
+                            </div>
+                            <div class="field">
+                                <label for="i-height">高度</label>
+                                <input type="number" id="i-height" value="768" step="8">
+                            </div>
+
+                            <div class="field">
+                                <label for="i-denoise">去噪强度 denoising</label>
+                                <input type="number" id="i-denoise" value="0.75" min="0" max="1" step="0.05">
+                            </div>
+                            <div class="field">
+                                <label for="i-resize">resize_mode</label>
+                                <select id="i-resize">
+                                    <option value="0">0 - Just Resize</option>
+                                    <option value="1">1 - Crop and Resize</option>
+                                    <option value="2" selected>2 - Resize and Fill</option>
+                                    <option value="3">3 - Latent upscale</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="i-sampler">采样器</label>
+                                <input type="text" id="i-sampler" value="Euler a">
+                            </div>
+                            <div class="field">
+                                <label for="i-scheduler">调度器</label>
+                                <input type="text" id="i-scheduler" value="automatic">
+                            </div>
+
+                            <div class="field">
+                                <label for="i-seed">随机种子 seed</label>
+                                <input type="number" id="i-seed" value="-1">
+                            </div>
+                            <div class="field">
+                                <label for="i-batch">单批张数</label>
+                                <input type="number" id="i-batch" value="1" min="1" max="8">
+                            </div>
+                            <div class="field">
+                                <label for="i-iter">批次数量</label>
+                                <input type="number" id="i-iter" value="1" min="1" max="8">
+                            </div>
+                            <div class="field field-check">
+                                <label><input type="checkbox" id="i-save"> 保存到 WebUI 输出目录</label>
+                            </div>
+                        </div>
+
+                        <div class="btn-row">
+                            <button type="button" class="btn-primary" id="i-generate">生成图片</button>
+                            <span class="status-text" id="i-status"></span>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- 结果区：两个 Tab 共用 -->
+                <div class="result-area" id="gen-result"></div>
+
+                <p class="section-hint section-hint-muted" style="margin-top:24px;">
+                    API 地址可在 <code>js/lora.js</code> 顶部修改。
+                    <br>
+                    如遇 "连接失败" 可先在 WebUI 启动参数加上 <code>--cors-allow-origins=*</code>。
+                </p>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="site-footer">
+        <p>&copy; 2026 三下乡团队 · 本页为框架占位，后续完善</p>
+    </footer>
+
+    <div class="lightbox" id="lightbox">
+        <button class="lightbox-close" id="lightboxClose" aria-label="关闭">×</button>
+        <img class="lightbox-img" id="lightboxImg" alt="">
+    </div>
+
+    <script src="js/main.js"></script>
+    <script src="js/lora.js"></script>
+</body>
+</html>

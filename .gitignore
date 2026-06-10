@@ -1,0 +1,29 @@
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# Node（如果你后面加构建工具）
+node_modules/
+dist/
+.cache/
+
+# Python 临时
+__pycache__/
+*.pyc
+
+# 本地临时文件
+tmp/
+temp/
+*.tmp
