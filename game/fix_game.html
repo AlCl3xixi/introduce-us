@@ -686,9 +686,21 @@ function renderLevelSelect() {
 }
 
 function startLevel(id) {
-    state.level = LEVELS.find(l => l.id === id);
+    const lv = LEVELS.find(l => l.id === id);
+    state.level = lv;
     state.progress = [];
-    go('s2');
+
+    // 预加载当前关卡的瓷片图
+    const urls = [];
+    for (let i = 1; i <= lv.pressCount; i++) {
+        urls.push(`images/ceramic/${lv.imgPrefix}-${i}-whole.png?v=${IMG_VERSION}`);
+        urls.push(`images/ceramic/${lv.imgPrefix}-${i}-broken.png?v=${IMG_VERSION}`);
+    }
+
+    toast('加载中…', 5000);
+    preloadImages(urls).then(() => {
+        go('s2');
+    });
 }
 
 // =========================================================
@@ -1001,29 +1013,38 @@ function renderS4() {
         img.classList.remove('pulse');
 
         if (progress >= gStart && progress <= gEnd) {
-            // 成功：切到碎瓷片，播放动画，然后切下一张
-            img.src = `images/ceramic/${lv.imgPrefix}-${currentIndex}-broken.png?v=${IMG_VERSION}`;
-            img.classList.add('broken');
-            toast('✓ 剪碎成功！');
-            text.textContent = '完美控力！瓷片剪好了。';
-
-            switching = true;
+            // 成功：淡出 -> 切碎瓷片 -> 播动画 -> 淡出 -> 切下一张 -> 淡入
+            img.style.transition = 'opacity 0.15s';
+            img.style.opacity = '0';
             setTimeout(() => {
-                img.classList.remove('broken');
-                currentIndex++;
-                if (currentIndex <= total) {
-                    // 换下一张完整的
-                    img.src = `images/ceramic/${lv.imgPrefix}-${currentIndex}-whole.png?v=${IMG_VERSION}`;
-                    countEl.textContent = `第 ${currentIndex} / ${total} 片`;
-                    text.textContent = '继续剪下一瓷片，长按开始。';
-                } else {
-                    // 全部剪完
-                    countEl.textContent = `全部完成 ${total} / ${total} 片`;
-                    text.textContent = '全部瓷片剪好啦，可以进入下一步！';
-                    nextBtn.disabled = false;
-                }
-                switching = false;
-            }, 800);
+                img.src = `images/ceramic/${lv.imgPrefix}-${currentIndex}-broken.png?v=${IMG_VERSION}`;
+                img.style.opacity = '1';
+                img.classList.add('broken');
+                toast('✓ 剪碎成功！');
+                text.textContent = '完美控力！瓷片剪好了。';
+
+                switching = true;
+                setTimeout(() => {
+                    img.classList.remove('broken');
+                    currentIndex++;
+                    if (currentIndex <= total) {
+                        // 换下一张完整的
+                        img.style.opacity = '0';
+                        setTimeout(() => {
+                            img.src = `images/ceramic/${lv.imgPrefix}-${currentIndex}-whole.png?v=${IMG_VERSION}`;
+                            img.style.opacity = '1';
+                        }, 100);
+                        countEl.textContent = `第 ${currentIndex} / ${total} 片`;
+                        text.textContent = '继续剪下一瓷片，长按开始。';
+                    } else {
+                        // 全部剪完
+                        countEl.textContent = `全部完成 ${total} / ${total} 片`;
+                        text.textContent = '全部瓷片剪好啦，可以进入下一步！';
+                        nextBtn.disabled = false;
+                    }
+                    switching = false;
+                }, 700);
+            }, 150);
         } else if (progress < gStart) {
             toast('力度不足');
             text.textContent = '松手太早，瓷片还没剪到位，长按再试。';
