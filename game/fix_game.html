@@ -11,8 +11,7 @@
     body {
         font-family: "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
         color: #3a2c20;
-        background:
-            radial-gradient(ellipse at top, #fff4e3 0%, #f8e7cd 60%, #f0d8b7 100%);
+        background: #3d2817;
         overflow-x: hidden;
         min-height: 100vh;
         display: flex;
@@ -20,11 +19,15 @@
     }
 
     .app {
-        max-width: 720px;
+        max-width: 480px;
         margin: 0 auto;
         padding: 16px;
         flex: 1;
         width: 100%;
+        background: url('images/bg.jpg') center/cover no-repeat;
+        min-height: 100vh;
+        box-shadow: 0 0 40px rgba(0,0,0,0.3);
+        position: relative;
     }
 
     h1 { font-size: 26px; text-align: center; letter-spacing: 2px; color: #7a4f2d; }
@@ -71,11 +74,13 @@
 
     /* ========== 卡片 ========== */
     .card {
-        background: linear-gradient(180deg, #fffaef 0%, #fff3df 100%);
-        border: 1px solid #ebd9b4;
+        background: linear-gradient(180deg, rgba(255, 250, 239, 0.85) 0%, rgba(255, 243, 223, 0.78) 100%);
+        border: 1px solid rgba(235, 217, 180, 0.6);
         border-radius: 16px;
         padding: 20px;
         box-shadow: 0 6px 16px rgba(122, 79, 45, 0.08);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
     }
     .card + .card { margin-top: 16px; }
 
@@ -104,17 +109,18 @@
 
     /* ========== 首页 ========== */
     .hero {
-        text-align: center;
-        padding: 24px 12px 18px;
-        background: linear-gradient(135deg, #4c6ef5, #845ef7);
-        color: #fff;
+        width: 100%;
         border-radius: 16px;
         margin-bottom: 14px;
-        box-shadow: 0 6px 16px rgba(76,110,245,0.25);
+        box-shadow: 0 6px 16px rgba(122, 79, 45, 0.2);
+        overflow: hidden;
+        line-height: 0;
     }
-    .hero .emoji-big { font-size: 44px; margin-bottom: 6px; letter-spacing: 4px; }
-    .hero h1 { color: #fff; margin-bottom: 4px; }
-    .hero .subtitle { color: rgba(255,255,255,0.85); letter-spacing: 4px; font-size: 13px; }
+    .hero img {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
 
     /* ========== 关卡选择 ========== */
     .levels {
@@ -138,13 +144,25 @@
         color: #fff;
         font-weight: 600;
         box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        overflow: hidden;
     }
-    .level:hover { transform: translateY(-3px); }
-    .level .ltitle { font-size: 22px; letter-spacing: 2px; }
-    .level .lmeta { font-size: 12px; line-height: 1.8; opacity: 0.9; margin-top: 8px; font-weight: 500; }
-    .level.level-1 { background: linear-gradient(135deg, #ff7a7a, #ff4d4d); }
-    .level.level-2 { background: linear-gradient(135deg, #ffb54d, #ff922b); }
-    .level.level-3 { background: linear-gradient(135deg, #4dabf7, #1971c2); }
+    .level::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 100%);
+        z-index: 0;
+    }
+    .level > * { position: relative; z-index: 1; }
+    .level:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,0,0,0.2); }
+    .level .ltitle { font-size: 22px; letter-spacing: 2px; text-shadow: 0 2px 6px rgba(0,0,0,0.4); }
+    .level .lmeta { font-size: 12px; line-height: 1.8; opacity: 0.95; margin-top: 8px; font-weight: 500; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+    .level.level-1 { background-image: url('images/covers/mudan.jpg'); background-color: #ff6b6b; }
+    .level.level-2 { background-image: url('images/covers/fenghuang.jpg'); background-color: #ff922b; }
+    .level.level-3 { background-image: url('images/covers/long.jpg'); background-color: #1971c2; }
 
     /* ========== 灰浆配比 ========== */
     .mortar {
@@ -320,21 +338,24 @@
         margin: 10px auto 0;
         display: flex;
         justify-content: center;
+        align-items: center;
     }
-    .ceramic-box {
-        width: 140px; height: 140px; border-radius: 20px;
-        background: linear-gradient(135deg, #748ffc, #4c6ef5);
-        box-shadow: 0 10px 20px rgba(76,110,245,0.35);
-        display: flex; align-items: center; justify-content: center;
-        color: #fff;
-        font-size: 18px;
-        font-weight: 700;
-        letter-spacing: 2px;
-        text-align: center;
-        padding: 14px;
-        transition: transform 0.15s;
+    .ceramic-img {
+        max-width: 220px;
+        max-height: 180px;
+        object-fit: contain;
+        border-radius: 12px;
+        transition: transform 0.15s, opacity 0.3s;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
     }
-    .ceramic-box.pulse { transform: scale(1.06); }
+    .ceramic-img.pulse { transform: scale(1.04); }
+    .ceramic-img.broken { animation: crack 0.5s ease; }
+    @keyframes crack {
+        0% { transform: scale(1); }
+        30% { transform: scale(1.1) rotate(2deg); }
+        60% { transform: scale(0.95) rotate(-1deg); }
+        100% { transform: scale(1); }
+    }
     .press-track {
         height: 32px; margin: 24px auto 0;
         border-radius: 16px;
@@ -433,6 +454,10 @@
 
     /* ========== 移动端（≤ 480px）微调 ========== */
     @media (max-width: 480px) {
+        .levels { grid-template-columns: repeat(2, 1fr); }
+        .level { min-height: 140px; padding: 16px 8px; }
+        .level .ltitle { font-size: 18px; }
+        .level .lmeta { font-size: 11px; }
         .piece, .slot { width: 78px; height: 78px; }
         .piece { font-size: 30px; }
         .piece-label { font-size: 10px; }
@@ -441,7 +466,8 @@
         h1 { font-size: 22px; letter-spacing: 1px; }
         h2 { font-size: 18px; }
         .card { padding: 16px; border-radius: 12px; }
-        .hero { padding: 22px 12px 16px; }
+        .hero { padding: 28px 16px 24px; }
+        .hero .emoji-big { font-size: 36px; }
     }
 </style>
 </head>
@@ -463,11 +489,12 @@ const LEVELS = [
         name: "新手",
         title: "牡丹花",
         emoji: "🌸",
+        imgPrefix: "mudan",
         difficulty: "★☆☆",
         puzzleCount: 3,
         pressCount: 3,
-        pressGreen: [25, 75],  // 绿区宽度 50%，新手友好
-        pressSpeed: 0.35,      // 每 16ms 增长，约 4.5 秒走满 0-100
+        pressGreen: [25, 75],
+        pressSpeed: 0.35,
         rough: [
             { id: 'huaban', label: '花瓣', emoji: '🌺' },
             { id: 'huaxin', label: '花芯', emoji: '🌼' },
@@ -485,11 +512,12 @@ const LEVELS = [
         name: "普通",
         title: "凤凰",
         emoji: "🦅",
+        imgPrefix: "fenghuang",
         difficulty: "★★☆",
         puzzleCount: 4,
         pressCount: 4,
-        pressGreen: [35, 70],  // 绿区宽度 35%，中等难度
-        pressSpeed: 0.55,      // 约 2.9 秒走满，更考验反应
+        pressGreen: [35, 70],
+        pressSpeed: 0.55,
         rough: [
             { id: 'ftou', label: '凤头', emoji: '🐦' },
             { id: 'fshen', label: '凤身', emoji: '🪶' },
@@ -509,11 +537,12 @@ const LEVELS = [
         name: "进阶",
         title: "神龙",
         emoji: "🐉",
+        imgPrefix: "long",
         difficulty: "★★★",
         puzzleCount: 5,
         pressCount: 5,
-        pressGreen: [45, 65],  // 绿区宽度 20%，真·高手区
-        pressSpeed: 0.85,     // 约 1.9 秒走满，极限挑战
+        pressGreen: [45, 65],
+        pressSpeed: 0.85,
         rough: [
             { id: 'ltou', label: '龙头', emoji: '🐲' },
             { id: 'lshen', label: '龙身', emoji: '🌀' },
@@ -601,9 +630,7 @@ function render() {
 function renderHome() {
     app.innerHTML = `
         <div class="hero">
-            <div class="emoji-big">潮汕嵌瓷</div>
-            <h1>非遗手工体验</h1>
-            <div class="subtitle">CHAOSHAN · QIANCI CRAFT</div>
+            <img src="images/hero-bg.jpg" alt="潮汕嵌瓷">
         </div>
 
         <div class="card">
@@ -868,11 +895,12 @@ function attachDragDrop(type, slotIdList) {
 }
 
 // =========================================================
-// 第四步 · 剪饶控力（长按 + 三段式进度条）
+// 第四步 · 剪饶控力（长按 + 一张一张剪瓷片）
 // =========================================================
 function renderS4() {
     const lv = state.level;
     const [gStart, gEnd] = lv.pressGreen;
+    const total = lv.pressCount;
 
     app.innerHTML = `
         ${topBar('剪饶控力 · ' + lv.title, 'level', '第四步 · 剪饶控力', 4)}
@@ -880,14 +908,18 @@ function renderS4() {
             <h2>第四步 · 剪饶控力</h2>
             <p class="muted">长按下方按钮，控制力度停在绿色合格区。<br>灰色=不足，绿色=合格，红色=过大。</p>
 
-            <div class="ceramic"><div class="ceramic-box" id="ceramic">彩色瓷片<br>待剪裁</div></div>
+            <div class="ceramic">
+                <img class="ceramic-img" id="ceramic-img" 
+                     src="images/ceramic/${lv.imgPrefix}-1-whole.png" 
+                     alt="瓷片">
+            </div>
 
             <div class="press-track" id="press-track"
                  style="--gray-end:${gStart}%; --green-end:${gEnd}%;">
                 <div class="press-handle" id="press-handle"></div>
             </div>
             <div class="press-text" id="press-text">长按按钮开始…</div>
-            <div class="press-count" id="press-count">成功 0 / ${lv.pressCount} 次</div>
+            <div class="press-count" id="press-count">第 1 / ${total} 片</div>
 
             <button class="longpress-btn" id="press-btn">长按控力</button>
 
@@ -897,18 +929,18 @@ function renderS4() {
         </div>
     `;
 
-    // 交互
     const btn = document.getElementById('press-btn');
     const handle = document.getElementById('press-handle');
-    const ceramic = document.getElementById('ceramic');
+    const img = document.getElementById('ceramic-img');
     const text = document.getElementById('press-text');
     const countEl = document.getElementById('press-count');
     const nextBtn = document.getElementById('btn-next-s4');
 
-    let successCount = 0;
+    let currentIndex = 1;
     let progress = 0;
     let timer = null;
     let pressing = false;
+    let switching = false;
 
     function tick() {
         progress += lv.pressSpeed;
@@ -922,12 +954,11 @@ function renderS4() {
     document.addEventListener('touchend', stop);
 
     function start() {
-        if (pressing) return;
-        // 每次新一次尝试都从 0 开始
+        if (pressing || switching || currentIndex > total) return;
         progress = 0;
         handle.style.left = '0%';
         pressing = true;
-        ceramic.classList.add('pulse');
+        img.classList.add('pulse');
         text.textContent = '正在控力…松手停在绿色区间';
         timer = setInterval(tick, 16);
     }
@@ -936,24 +967,38 @@ function renderS4() {
         if (!pressing) return;
         pressing = false;
         clearInterval(timer);
-        ceramic.classList.remove('pulse');
+        img.classList.remove('pulse');
 
         if (progress >= gStart && progress <= gEnd) {
-            successCount++;
-            toast('✓ 成功一次！');
-            text.textContent = '完美控力！再按一次继续。';
+            // 成功：切到碎瓷片，播放动画，然后切下一张
+            img.src = `images/ceramic/${lv.imgPrefix}-${currentIndex}-broken.png`;
+            img.classList.add('broken');
+            toast('✓ 剪碎成功！');
+            text.textContent = '完美控力！瓷片剪好了。';
+
+            switching = true;
+            setTimeout(() => {
+                img.classList.remove('broken');
+                currentIndex++;
+                if (currentIndex <= total) {
+                    // 换下一张完整的
+                    img.src = `images/ceramic/${lv.imgPrefix}-${currentIndex}-whole.png`;
+                    countEl.textContent = `第 ${currentIndex} / ${total} 片`;
+                    text.textContent = '继续剪下一瓷片，长按开始。';
+                } else {
+                    // 全部剪完
+                    countEl.textContent = `全部完成 ${total} / ${total} 片`;
+                    text.textContent = '全部瓷片剪好啦，可以进入下一步！';
+                    nextBtn.disabled = false;
+                }
+                switching = false;
+            }, 800);
         } else if (progress < gStart) {
             toast('力度不足');
             text.textContent = '松手太早，瓷片还没剪到位，长按再试。';
         } else {
             toast('力度过大');
-            text.textContent = '力度过猛，瓷片剪碎了！轻一点再试。';
-        }
-
-        countEl.textContent = `成功 ${successCount} / ${lv.pressCount} 次`;
-        if (successCount >= lv.pressCount) {
-            nextBtn.disabled = false;
-            text.textContent = '剪饶次数集齐，可以进入下一步。';
+            text.textContent = '力度过猛，瓷片剪太碎了！轻一点再试。';
         }
     }
 }
