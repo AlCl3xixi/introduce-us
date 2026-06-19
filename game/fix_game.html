@@ -561,6 +561,9 @@ const LEVELS = [
     }
 ];
 
+// ---------- 配置 ----------
+const IMG_VERSION = 'v1';  // 修改版本号可强制刷新图片缓存
+
 // ---------- 全局状态 ----------
 let state = {
     screen: 'home',      // home | level | s2 | s3 | s4 | s5 | s6 | finale
@@ -921,7 +924,7 @@ function renderS4() {
 
             <div class="ceramic">
                 <img class="ceramic-img" id="ceramic-img" 
-                     src="images/ceramic/${lv.imgPrefix}-1-whole.png" 
+                     src="images/ceramic/${lv.imgPrefix}-1-whole.png?v=${IMG_VERSION}" 
                      alt="瓷片">
             </div>
 
@@ -943,8 +946,8 @@ function renderS4() {
     // 预加载当前关卡所有瓷片图
     const urls = [];
     for (let i = 1; i <= total; i++) {
-        urls.push(`images/ceramic/${lv.imgPrefix}-${i}-whole.png`);
-        urls.push(`images/ceramic/${lv.imgPrefix}-${i}-broken.png`);
+        urls.push(`images/ceramic/${lv.imgPrefix}-${i}-whole.png?v=${IMG_VERSION}`);
+        urls.push(`images/ceramic/${lv.imgPrefix}-${i}-broken.png?v=${IMG_VERSION}`);
     }
     preloadImages(urls).then(results => {
         const failed = results.filter(r => !r.ok);
@@ -999,7 +1002,7 @@ function renderS4() {
 
         if (progress >= gStart && progress <= gEnd) {
             // 成功：切到碎瓷片，播放动画，然后切下一张
-            img.src = `images/ceramic/${lv.imgPrefix}-${currentIndex}-broken.png`;
+            img.src = `images/ceramic/${lv.imgPrefix}-${currentIndex}-broken.png?v=${IMG_VERSION}`;
             img.classList.add('broken');
             toast('✓ 剪碎成功！');
             text.textContent = '完美控力！瓷片剪好了。';
@@ -1010,7 +1013,7 @@ function renderS4() {
                 currentIndex++;
                 if (currentIndex <= total) {
                     // 换下一张完整的
-                    img.src = `images/ceramic/${lv.imgPrefix}-${currentIndex}-whole.png`;
+                    img.src = `images/ceramic/${lv.imgPrefix}-${currentIndex}-whole.png?v=${IMG_VERSION}`;
                     countEl.textContent = `第 ${currentIndex} / ${total} 片`;
                     text.textContent = '继续剪下一瓷片，长按开始。';
                 } else {
