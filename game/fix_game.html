@@ -393,6 +393,101 @@
     }
     .longpress-btn:active { background: linear-gradient(135deg, #364fc7, #5f3dc4); transform: translateY(1px); }
 
+    /* ========== 第5步 · 图片拼图 ========== */
+    .puzzle-preview {
+        display: flex; justify-content: center; margin: 4px 0 12px;
+    }
+    .puzzle-preview img {
+        width: 120px; height: 120px; border-radius: 12px;
+        border: 2px solid #dee2e6;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .puzzle-board-wrap {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        max-width: 320px;
+        margin: 0 auto;
+        background: #f8f9fa;
+        border-radius: 16px;
+        border: 2px solid #dee2e6;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06) inset;
+    }
+    .puzzle-board-bg {
+        position: absolute; left: 0; top: 0;
+        width: 100%; height: 100%;
+        opacity: 0.25;
+        background-size: cover;
+        background-position: center;
+        pointer-events: none;
+    }
+    .puzzle-board {
+        position: relative;
+        width: 100%; height: 100%;
+    }
+    .puzzle-piece-board {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        pointer-events: none;
+        user-select: none;
+    }
+    .puzzle-piece-board img {
+        width: 100%; height: 100%;
+        pointer-events: none;
+        user-select: none;
+        -webkit-user-drag: none;
+    }
+    .puzzle-pool {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+        align-items: center;
+        min-height: 100px;
+        padding: 12px;
+        background: #f1f3f5;
+        border-radius: 12px;
+        margin-top: 14px;
+        border: 1px dashed #ced4da;
+    }
+    .puzzle-piece {
+        height: 80px;
+        cursor: grab;
+        user-select: none;
+        -webkit-user-drag: none;
+        touch-action: none;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+    }
+    .puzzle-piece:hover {
+        transform: scale(1.05);
+        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+    }
+    .puzzle-piece:active { cursor: grabbing; transform: scale(0.98); }
+    .puzzle-piece.dragging { opacity: 0.4; }
+    .puzzle-piece.placed {
+        opacity: 0;
+        pointer-events: none;
+    }
+    .puzzle-ghost {
+        position: fixed;
+        pointer-events: none;
+        z-index: 9999;
+        height: 100px;
+        opacity: 0.9;
+        filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25));
+    }
+    .puzzle-success {
+        animation: puzzlePop 0.4s ease;
+    }
+    @keyframes puzzlePop {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.08); }
+        100% { transform: scale(1); }
+    }
+
     /* ========== 线条描摹 ========== */
     .trace-wrap {
         position: relative; width: 100%; aspect-ratio: 1 / 1;
@@ -690,12 +785,16 @@ function startLevel(id) {
     state.level = lv;
     state.progress = [];
 
-    // 预加载当前关卡的瓷片图
+    // 预加载当前关卡的瓷片图+拼图
     const urls = [];
     for (let i = 1; i <= lv.pressCount; i++) {
         urls.push(`images/ceramic/${lv.imgPrefix}-${i}-whole.png?v=${IMG_VERSION}`);
         urls.push(`images/ceramic/${lv.imgPrefix}-${i}-broken.png?v=${IMG_VERSION}`);
     }
+    for (let i = 1; i <= lv.puzzleCount; i++) {
+        urls.push(`images/puzzle/${lv.imgPrefix}-${i}.png?v=${IMG_VERSION}`);
+    }
+    urls.push(`images/puzzle/${lv.imgPrefix}-preview.jpg?v=${IMG_VERSION}`);
 
     toast('加载中…', 5000);
     preloadImages(urls).then(() => {
@@ -1062,20 +1161,19 @@ function finishPress() {
 }
 
 // =========================================================
-// 第五步 · 瓷片镶嵌（再次拼图，与第三步逻辑一致）
+// 第五步 · 瓷片镶嵌（图片拼图）
 // =========================================================
 function renderS5() {
     const lv = state.level;
-    const slotsHtml = lv.inlay.map(s => `
-        <div class="slot hint tile-slot" data-slot="${s.id}">
-            <span class="slot-label">${s.label}</span>
-        </div>
-    `).join('');
+    const imgPrefix = lv.imgPrefix;
+    const total = lv.puzzleCount;
 
-    const shuffled = [...lv.inlay].sort(() => Math.random() - 0.5);
-    const piecesHtml = shuffled.map(s => `
-        <div class="piece piece-${s.id}" draggable="true" data-piece="${s.id}">
-            <span class="piece-label">${s.label}</span>
+    const indices = Array.from({ length: total }, (_, i) => i + 1);
+    const shuffled = [...indices].sort(() => Math.random() - 0.5);
+
+    const piecesHtml = shuffled.map(i => `
+        <div class="puzzle-piece" data-index="${i}">
+            <img src="images/puzzle/${imgPrefix}-${i}.png?v=${IMG_VERSION}" alt="拼图${i}">
         </div>
     `).join('');
 
@@ -1083,28 +1181,170 @@ function renderS5() {
         ${topBar('瓷片镶嵌 · ' + lv.title, 'level', '第五步 · 瓷片镶嵌', 5)}
         <div class="card">
             <h2>第五步 · 瓷片镶嵌</h2>
-            <p class="muted">将彩色瓷片碎片镶嵌到粗坯对应位置。</p>
+            <p class="muted">把下方的瓷片碎片拖到框里，拼成完整的图案。</p>
 
-            <div class="puzzle-wrap">
-                <div class="puzzle-pool">
-                    <div class="board-title">彩色瓷片</div>
-                    <div class="chips-grid" id="pool">${piecesHtml}</div>
-                </div>
-                <div class="puzzle-board">
-                    <div class="board-title">镶嵌位置（共 ${lv.puzzleCount} 处）</div>
-                    <div class="slots" id="slots">${slotsHtml}</div>
-                </div>
+            <div class="puzzle-preview">
+                <img src="images/puzzle/${imgPrefix}-preview.jpg?v=${IMG_VERSION}" alt="参考图">
+            </div>
+
+            <div class="puzzle-board-wrap">
+                <div class="puzzle-board-bg" style="background-image: url('images/puzzle/${imgPrefix}-preview.jpg?v=${IMG_VERSION}');"></div>
+                <div class="puzzle-board" id="puzzle-board"></div>
+            </div>
+
+            <div class="puzzle-pool" id="puzzle-pool">
+                ${piecesHtml}
             </div>
 
             <div class="btn-row">
                 <button class="btn ghost" onclick="go('s5')">↻ 重来</button>
                 <button class="btn" id="btn-next" disabled onclick="finishInlay()">完成 →</button>
             </div>
-            <p class="muted" style="margin-top:8px" id="puzzle-hint">全部镶嵌完成可进入下一步</p>
+            <p class="muted" style="margin-top:8px" id="puzzle-hint">已镶嵌：0 / ${total} 片</p>
         </div>
     `;
 
-    attachDragDrop('inlay', lv.inlay.map(r => r.id));
+    setupPuzzle(imgPrefix, total);
+}
+
+function setupPuzzle(imgPrefix, total) {
+    const board = document.getElementById('puzzle-board');
+    const pool = document.getElementById('puzzle-pool');
+    const pieces = pool.querySelectorAll('.puzzle-piece');
+    const btnNext = document.getElementById('btn-next');
+    const hint = document.getElementById('puzzle-hint');
+
+    let placed = new Set();
+    let draggingPiece = null;
+    let ghost = null;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+
+    const urls = [];
+    for (let i = 1; i <= total; i++) {
+        urls.push(`images/puzzle/${imgPrefix}-${i}.png?v=${IMG_VERSION}`);
+    }
+    preloadImages(urls);
+
+    pieces.forEach(piece => {
+        piece.addEventListener('mousedown', startDrag);
+        piece.addEventListener('touchstart', startDrag, { passive: false });
+    });
+
+    function startDrag(e) {
+        e.preventDefault();
+        const piece = e.currentTarget;
+        const index = parseInt(piece.dataset.index);
+        if (placed.has(index)) return;
+
+        draggingPiece = piece;
+        piece.classList.add('dragging');
+
+        const rect = piece.getBoundingClientRect();
+        const img = piece.querySelector('img');
+        const clientX = e.clientX || e.touches[0].clientX;
+        const clientY = e.clientY || e.touches[0].clientY;
+
+        dragOffsetX = clientX - rect.left;
+        dragOffsetY = clientY - rect.top;
+
+        ghost = document.createElement('div');
+        ghost.className = 'puzzle-ghost';
+        ghost.innerHTML = `<img src="${img.src}" alt="">`;
+        ghost.style.left = rect.left + 'px';
+        ghost.style.top = rect.top + 'px';
+        ghost.style.height = rect.height + 'px';
+        document.body.appendChild(ghost);
+
+        document.addEventListener('mousemove', onDrag);
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('touchmove', onDrag, { passive: false });
+        document.addEventListener('touchend', endDrag);
+    }
+
+    function onDrag(e) {
+        if (!ghost || !draggingPiece) return;
+        e.preventDefault();
+
+        const clientX = e.clientX || e.touches[0].clientX;
+        const clientY = e.clientY || e.touches[0].clientY;
+
+        ghost.style.left = (clientX - dragOffsetX) + 'px';
+        ghost.style.top = (clientY - dragOffsetY) + 'px';
+    }
+
+    function endDrag(e) {
+        if (!draggingPiece || !ghost) return;
+
+        const clientX = e.clientX || (e.changedTouches && e.changedTouches[0].clientX);
+        const clientY = e.clientY || (e.changedTouches && e.changedTouches[0].clientY);
+
+        const boardRect = board.getBoundingClientRect();
+        const pieceIndex = parseInt(draggingPiece.dataset.index);
+        const ghostRect = ghost.getBoundingClientRect();
+
+        const ghostCenterX = ghostRect.left + ghostRect.width / 2;
+        const inBoardX = ghostCenterX >= boardRect.left && ghostCenterX <= boardRect.right;
+        const inBoardY = clientY >= boardRect.top && clientY <= boardRect.bottom;
+
+        if (inBoardX && inBoardY) {
+            const relativeX = (ghostCenterX - boardRect.left) / boardRect.width;
+
+            const pieceWidthPct = 1 / total;
+            const correctCenterPct = (pieceIndex - 0.5) * pieceWidthPct;
+            const distance = Math.abs(relativeX - correctCenterPct);
+            const threshold = pieceWidthPct * 0.6;
+
+            if (distance < threshold) {
+                placePiece(pieceIndex);
+            } else {
+                toast('位置不对，再试试');
+            }
+        }
+
+        if (ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost);
+        ghost = null;
+        if (draggingPiece) draggingPiece.classList.remove('dragging');
+        draggingPiece = null;
+
+        document.removeEventListener('mousemove', onDrag);
+        document.removeEventListener('mouseup', endDrag);
+        document.removeEventListener('touchmove', onDrag);
+        document.removeEventListener('touchend', endDrag);
+    }
+
+    function placePiece(index) {
+        placed.add(index);
+
+        const poolPiece = pool.querySelector(`.puzzle-piece[data-index="${index}"]`);
+        if (poolPiece) {
+            poolPiece.classList.add('placed');
+        }
+
+        const pieceEl = document.createElement('div');
+        pieceEl.className = 'puzzle-piece-board';
+        pieceEl.dataset.index = index;
+
+        const pieceWidthPct = 100 / total;
+        const leftPct = (index - 1) * pieceWidthPct;
+
+        pieceEl.style.left = leftPct + '%';
+        pieceEl.style.width = pieceWidthPct + '%';
+
+        pieceEl.innerHTML = `<img src="images/puzzle/${imgPrefix}-${index}.png?v=${IMG_VERSION}" alt="">`;
+        board.appendChild(pieceEl);
+
+        pieceEl.classList.add('puzzle-success');
+        setTimeout(() => pieceEl.classList.remove('puzzle-success'), 400);
+
+        hint.textContent = `已镶嵌：${placed.size} / ${total} 片`;
+
+        if (placed.size === total) {
+            btnNext.disabled = false;
+            hint.textContent = '✓ 全部镶嵌完成！';
+            toast('镶嵌完成！');
+        }
+    }
 }
 
 function finishInlay() {
