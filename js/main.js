@@ -133,4 +133,81 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
     renderTeam();
     renderGallery();
+    preloadGameImages();
 });
+
+// ------------------------------------------------------------
+// 6. 游戏图片预加载
+//    在用户浏览主页面时后台加载游戏资源，提升进入游戏的速度
+// ------------------------------------------------------------
+function preloadGameImages() {
+    const gameImages = [
+        'game/images/bg.jpg',
+        'game/images/covers/mudan.jpg',
+        'game/images/covers/fenghuang.jpg',
+        'game/images/covers/long.jpg',
+        
+        'game/images/puzzle/mudan-preview.jpg',
+        'game/images/puzzle/mudan-full.jpg',
+        'game/images/puzzle/mudan-1.png',
+        'game/images/puzzle/mudan-2.png',
+        'game/images/puzzle/mudan-3.png',
+        'game/images/puzzle/mudan-1-s.png',
+        'game/images/puzzle/mudan-2-s.png',
+        'game/images/puzzle/mudan-3-s.png',
+        
+        'game/images/puzzle/fenghuang-preview.jpg',
+        'game/images/puzzle/fenghuang-1.png',
+        'game/images/puzzle/fenghuang-2.png',
+        'game/images/puzzle/fenghuang-3.png',
+        'game/images/puzzle/fenghuang-4.png',
+        'game/images/puzzle/fenghuang-1-s.png',
+        'game/images/puzzle/fenghuang-2-s.png',
+        'game/images/puzzle/fenghuang-3-s.png',
+        'game/images/puzzle/fenghuang-4-s.png',
+        
+        'game/images/puzzle/long-preview.jpg',
+        'game/images/puzzle/long-1.png',
+        'game/images/puzzle/long-2.png',
+        'game/images/puzzle/long-3.png',
+        'game/images/puzzle/long-4.png',
+        'game/images/puzzle/long-5.png',
+        'game/images/puzzle/long-1-s.png',
+        'game/images/puzzle/long-2-s.png',
+        'game/images/puzzle/long-3-s.png',
+        'game/images/puzzle/long-4-s.png',
+        'game/images/puzzle/long-5-s.png',
+        
+        'game/images/ceramic/mudan-1-whole.png',
+        'game/images/ceramic/mudan-1-broken.png',
+        'game/images/ceramic/mudan-2-whole.png',
+        'game/images/ceramic/mudan-2-broken.png',
+        'game/images/ceramic/mudan-3-whole.png',
+        'game/images/ceramic/mudan-3-broken.png',
+        
+        'game/images/ceramic/fenghuang-1-whole.png',
+        'game/images/ceramic/fenghuang-1-broken.png',
+        'game/images/ceramic/fenghuang-2-whole.png',
+        'game/images/ceramic/fenghuang-2-broken.png',
+        'game/images/ceramic/fenghuang-3-whole.png',
+        'game/images/ceramic/fenghuang-3-broken.png',
+        'game/images/ceramic/fenghuang-4-whole.png',
+        'game/images/ceramic/fenghuang-4-broken.png',
+        
+        'game/images/ceramic/long-1-whole.png',
+        'game/images/ceramic/long-1-broken.png',
+        'game/images/ceramic/long-2-whole.png',
+        'game/images/ceramic/long-2-broken.png',
+        'game/images/ceramic/long-3-whole.png',
+        'game/images/ceramic/long-3-broken.png',
+        'game/images/ceramic/long-4-whole.png',
+        'game/images/ceramic/long-4-broken.png',
+        'game/images/ceramic/long-5-whole.png',
+        'game/images/ceramic/long-5-broken.png',
+    ];
+    
+    gameImages.forEach(src => {
+        const img = new Image();
+        img.src = src;
+    });
+}
