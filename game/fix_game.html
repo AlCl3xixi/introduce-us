@@ -235,13 +235,6 @@
     @media (max-width: 520px) {
         .puzzle-wrap { grid-template-columns: 1fr; }
     }
-    .puzzle-board, .puzzle-pool {
-        min-height: 320px;
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 14px;
-        padding: 14px;
-    }
     .board-title {
         text-align: center;
         font-size: 13px;
@@ -395,41 +388,38 @@
 
     /* ========== 第5步 · 图片拼图 ========== */
     .puzzle-preview {
-        display: flex; justify-content: center; margin: 4px 0 12px;
+        display: flex; justify-content: center; margin: 4px 0 10px;
     }
     .puzzle-preview img {
-        width: 120px; height: 120px; border-radius: 12px;
+        width: 60px; height: 60px; border-radius: 6px;
         border: 2px solid #dee2e6;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.06);
     }
     .puzzle-board-wrap {
         position: relative;
-        width: 100%;
-        aspect-ratio: 1 / 1;
-        max-width: 320px;
+        width: 180px;
+        height: 180px;
         margin: 0 auto;
-        background: #f8f9fa;
-        border-radius: 16px;
+        background: #ffffff;
+        border-radius: 10px;
         border: 2px solid #dee2e6;
         overflow: hidden;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.06) inset;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.04) inset;
     }
     .puzzle-board-bg {
         position: absolute; left: 0; top: 0;
         width: 100%; height: 100%;
-        opacity: 0.25;
-        background-size: cover;
-        background-position: center;
+        opacity: 0.3;
+        object-fit: cover;
         pointer-events: none;
     }
     .puzzle-board {
         position: relative;
-        width: 100%; height: 100%;
+        width: 100% !important; height: 100% !important;
+        min-height: 0 !important;
     }
     .puzzle-piece-board {
         position: absolute;
-        top: 0;
-        height: 100%;
         pointer-events: none;
         user-select: none;
     }
@@ -441,51 +431,71 @@
     }
     .puzzle-pool {
         display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
+        flex-wrap: nowrap;
+        gap: 4px;
         justify-content: center;
         align-items: center;
-        min-height: 100px;
-        padding: 12px;
-        background: #f1f3f5;
-        border-radius: 12px;
-        margin-top: 14px;
+        min-height: 60px;
+        padding: 8px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-top: 10px;
         border: 1px dashed #ced4da;
+        overflow-x: auto;
     }
     .puzzle-piece {
-        height: 80px;
+        height: 45px;
+        flex-shrink: 0;
         cursor: grab;
         user-select: none;
         -webkit-user-drag: none;
         touch-action: none;
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+        transition: transform 0.12s ease, box-shadow 0.12s ease;
+        filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
     }
     .puzzle-piece:hover {
         transform: scale(1.05);
-        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+        filter: drop-shadow(0 2px 5px rgba(0,0,0,0.15));
     }
-    .puzzle-piece:active { cursor: grabbing; transform: scale(0.98); }
+    .puzzle-piece:active { cursor: grabbing; transform: scale(0.96); }
     .puzzle-piece.dragging { opacity: 0.4; }
     .puzzle-piece.placed {
         opacity: 0;
         pointer-events: none;
+        transform: scale(0.8);
     }
     .puzzle-ghost {
         position: fixed;
         pointer-events: none;
         z-index: 9999;
-        height: 100px;
+        width: 180px;
+        height: 180px;
         opacity: 0.9;
-        filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25));
+        filter: drop-shadow(0 3px 8px rgba(0,0,0,0.2));
+    }
+    .puzzle-ghost img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
     }
     .puzzle-success {
-        animation: puzzlePop 0.4s ease;
+        animation: puzzlePop 0.3s ease;
     }
     @keyframes puzzlePop {
         0% { transform: scale(1); }
-        50% { transform: scale(1.08); }
+        50% { transform: scale(1.03); }
         100% { transform: scale(1); }
+    }
+    .puzzle-complete {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 12px;
+        transition: opacity 0.5s ease;
+        z-index: 10;
     }
 
     /* ========== 线条描摹 ========== */
@@ -720,12 +730,21 @@ function go(screen, opts = {}) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// DEBUG: 调试跳过函数，后期删除
+function debugSkip(target) {
+    if (target === 'finish') {
+        go('finale');
+    } else {
+        go(target);
+    }
+}
+// DEBUG END
+
 function render() {
     switch (state.screen) {
         case 'home': return renderHome(); break;
         case 'level': return renderLevelSelect(); break;
         case 's2': return renderS2(); break;
-        case 's3': return renderS3(); break;
         case 's4': return renderS4(); break;
         case 's5': return renderS5(); break;
         case 's6': return renderS6(); break;
@@ -835,6 +854,9 @@ function renderS2() {
             <div class="btn-row">
                 <button class="btn ghost" onclick="resetMortar()">重置</button>
                 <button class="btn" id="submit-mortar" onclick="submitMortar()" disabled>配比完成后解锁</button>
+                <!-- DEBUG: 调试跳过按钮，后期删除 -->
+                <button class="btn debug-skip" onclick="debugSkip('s4')" style="background:#ff6b6b;color:white">调试跳过</button>
+                <!-- DEBUG END -->
             </div>
             <p class="muted" style="margin-top:10px" id="mortar-hint">目标：4 : 2 : 1</p>
         </div>
@@ -869,61 +891,6 @@ function updateMortar() {
 function submitMortar() {
     toast('灰浆调配完成！');
     state.progress.push('s2');
-    go('s3');
-}
-
-// =========================================================
-// 第三步 · 骨架粗坯拼图
-// =========================================================
-// 通用：右侧轮廓槽 + 左侧碎片，拖拽吸附
-// =========================================================
-function renderS3() {
-    const lv = state.level;
-    const slotsHtml = lv.rough.map(s => `
-        <div class="slot hint tile-slot" data-slot="${s.id}">
-            <span class="slot-label">${s.label}</span>
-        </div>
-    `).join('');
-
-    // 随机打乱碎片
-    const shuffled = [...lv.rough].sort(() => Math.random() - 0.5);
-    const piecesHtml = shuffled.map(s => `
-        <div class="piece piece-${s.id}" draggable="true" data-piece="${s.id}">
-            <span class="piece-label">${s.label}</span>
-        </div>
-    `).join('');
-
-    app.innerHTML = `
-        ${topBar('搭建粗坯 · ' + lv.title, 'level', '第三步 · 骨架粗坯', 3)}
-        <div class="card">
-            <h2>第三步 · 搭建粗坯</h2>
-            <p class="muted">拖拽左侧碎片到右侧轮廓中，将各部件摆放到对应位置。</p>
-
-            <div class="puzzle-wrap">
-                <div class="puzzle-pool">
-                    <div class="board-title">散落碎片</div>
-                    <div class="chips-grid" id="pool">${piecesHtml}</div>
-                </div>
-                <div class="puzzle-board">
-                    <div class="board-title">轮廓位置（共 ${lv.puzzleCount} 处）</div>
-                    <div class="slots" id="slots">${slotsHtml}</div>
-                </div>
-            </div>
-
-            <div class="btn-row">
-                <button class="btn ghost" onclick="go('s3')">↻ 重来</button>
-                <button class="btn" id="btn-next" disabled onclick="finishRough()">完成 →</button>
-            </div>
-            <p class="muted" style="margin-top:8px" id="puzzle-hint">全部拼对后可进入下一步</p>
-        </div>
-    `;
-
-    attachDragDrop('rough', lv.rough.map(r => r.id));
-}
-
-function finishRough() {
-    toast('骨架粗坯完成！');
-    state.progress.push('s3');
     go('s4');
 }
 
@@ -1028,9 +995,9 @@ function renderS4() {
     const total = lv.pressCount;
 
     app.innerHTML = `
-        ${topBar('剪饶控力 · ' + lv.title, 'level', '第四步 · 剪饶控力', 4)}
+        ${topBar('剪饶控力 · ' + lv.title, 'level', '第三步 · 剪饶控力', 3)}
         <div class="card">
-            <h2>第四步 · 剪饶控力</h2>
+            <h2>第三步 · 剪饶控力</h2>
             <p class="muted">长按下方按钮，控制力度停在绿色合格区。<br>灰色=不足，绿色=合格，红色=过大。</p>
 
             <div class="ceramic">
@@ -1050,6 +1017,9 @@ function renderS4() {
 
             <div class="btn-row">
                 <button class="btn" id="btn-next-s4" disabled onclick="finishPress()">进入下一步 →</button>
+                <!-- DEBUG: 调试跳过按钮，后期删除 -->
+                <button class="btn debug-skip" onclick="debugSkip('s5')" style="background:#ff6b6b;color:white">调试跳过</button>
+                <!-- DEBUG END -->
             </div>
         </div>
     `;
@@ -1173,14 +1143,14 @@ function renderS5() {
 
     const piecesHtml = shuffled.map(i => `
         <div class="puzzle-piece" data-index="${i}">
-            <img src="images/puzzle/${imgPrefix}-${i}.png?v=${IMG_VERSION}" alt="拼图${i}">
+            <img src="images/puzzle/${imgPrefix}-${i}-s.png?v=${IMG_VERSION}" alt="拼图${i}">
         </div>
     `).join('');
 
     app.innerHTML = `
-        ${topBar('瓷片镶嵌 · ' + lv.title, 'level', '第五步 · 瓷片镶嵌', 5)}
+        ${topBar('瓷片镶嵌 · ' + lv.title, 'level', '第四步 · 瓷片镶嵌', 4)}
         <div class="card">
-            <h2>第五步 · 瓷片镶嵌</h2>
+            <h2>第四步 · 瓷片镶嵌</h2>
             <p class="muted">把下方的瓷片碎片拖到框里，拼成完整的图案。</p>
 
             <div class="puzzle-preview">
@@ -1188,7 +1158,7 @@ function renderS5() {
             </div>
 
             <div class="puzzle-board-wrap">
-                <div class="puzzle-board-bg" style="background-image: url('images/puzzle/${imgPrefix}-preview.jpg?v=${IMG_VERSION}');"></div>
+                <img class="puzzle-board-bg" src="images/puzzle/${imgPrefix}-preview.jpg?v=${IMG_VERSION}" alt="">
                 <div class="puzzle-board" id="puzzle-board"></div>
             </div>
 
@@ -1199,6 +1169,9 @@ function renderS5() {
             <div class="btn-row">
                 <button class="btn ghost" onclick="go('s5')">↻ 重来</button>
                 <button class="btn" id="btn-next" disabled onclick="finishInlay()">完成 →</button>
+                <!-- DEBUG: 调试跳过按钮，后期删除 -->
+                <button class="btn debug-skip" onclick="debugSkip('s6')" style="background:#ff6b6b;color:white">调试跳过</button>
+                <!-- DEBUG END -->
             </div>
             <p class="muted" style="margin-top:8px" id="puzzle-hint">已镶嵌：0 / ${total} 片</p>
         </div>
@@ -1223,6 +1196,7 @@ function setupPuzzle(imgPrefix, total) {
     const urls = [];
     for (let i = 1; i <= total; i++) {
         urls.push(`images/puzzle/${imgPrefix}-${i}.png?v=${IMG_VERSION}`);
+        urls.push(`images/puzzle/${imgPrefix}-${i}-s.png?v=${IMG_VERSION}`);
     }
     preloadImages(urls);
 
@@ -1250,7 +1224,7 @@ function setupPuzzle(imgPrefix, total) {
 
         ghost = document.createElement('div');
         ghost.className = 'puzzle-ghost';
-        ghost.innerHTML = `<img src="${img.src}" alt="">`;
+        ghost.innerHTML = `<img src="images/puzzle/${imgPrefix}-${index}.png?v=${IMG_VERSION}" alt="">`;
         ghost.style.left = rect.left + 'px';
         ghost.style.top = rect.top + 'px';
         ghost.style.height = rect.height + 'px';
@@ -1284,18 +1258,15 @@ function setupPuzzle(imgPrefix, total) {
         const ghostRect = ghost.getBoundingClientRect();
 
         const ghostCenterX = ghostRect.left + ghostRect.width / 2;
+        const ghostCenterY = ghostRect.top + ghostRect.height / 2;
         const inBoardX = ghostCenterX >= boardRect.left && ghostCenterX <= boardRect.right;
-        const inBoardY = clientY >= boardRect.top && clientY <= boardRect.bottom;
+        const inBoardY = ghostCenterY >= boardRect.top && ghostCenterY <= boardRect.bottom;
 
         if (inBoardX && inBoardY) {
             const relativeX = (ghostCenterX - boardRect.left) / boardRect.width;
+            const relativeY = (ghostCenterY - boardRect.top) / boardRect.height;
 
-            const pieceWidthPct = 1 / total;
-            const correctCenterPct = (pieceIndex - 0.5) * pieceWidthPct;
-            const distance = Math.abs(relativeX - correctCenterPct);
-            const threshold = pieceWidthPct * 0.6;
-
-            if (distance < threshold) {
+            if (isCorrectPosition(imgPrefix, pieceIndex, relativeX, relativeY) && !placed.has(pieceIndex)) {
                 placePiece(pieceIndex);
             } else {
                 toast('位置不对，再试试');
@@ -1313,6 +1284,57 @@ function setupPuzzle(imgPrefix, total) {
         document.removeEventListener('touchend', endDrag);
     }
 
+    function isCorrectPosition(prefix, index, relX, relY) {
+        switch(prefix) {
+            case 'mudan':
+                return isMudanCorrect(index, relX);
+            case 'fenghuang':
+                return isFenghuangCorrect(index, relX, relY);
+            case 'long':
+                return isLongCorrect(index, relX, relY);
+            default:
+                return false;
+        }
+    }
+
+    function isMudanCorrect(index, relX) {
+        switch(index) {
+            case 1: return relX < 0.33;
+            case 2: return relX >= 0.33 && relX <= 0.67;
+            case 3: return relX > 0.67;
+            default: return false;
+        }
+    }
+
+    function isFenghuangCorrect(index, relX, relY) {
+        const cx = 0.5, cy = 0.5;
+        const dx = Math.abs(relX - cx);
+        const dy = Math.abs(relY - cy);
+        switch(index) {
+            case 1: return dx > dy && relX < cx;
+            case 2: return dy > dx && relY < cy;
+            case 3: return dx > dy && relX > cx;
+            case 4: return dy > dx && relY > cy;
+            default: return false;
+        }
+    }
+
+    function isLongCorrect(index, relX, relY) {
+        const cx = 0.5, cy = 0.5;
+        switch(index) {
+            case 1: return relX > cx && relY < cy;
+            case 2: return relX < cx && relY < cy;
+            case 3: return relX < cx && relY > cy;
+            case 4: return relX > cx && relY > cy;
+            case 5: {
+                const distX = Math.abs(relX - cx);
+                const distY = Math.abs(relY - cy);
+                return distX < 0.35 && distY < 0.35;
+            }
+            default: return false;
+        }
+    }
+
     function placePiece(index) {
         placed.add(index);
 
@@ -1325,11 +1347,7 @@ function setupPuzzle(imgPrefix, total) {
         pieceEl.className = 'puzzle-piece-board';
         pieceEl.dataset.index = index;
 
-        const pieceWidthPct = 100 / total;
-        const leftPct = (index - 1) * pieceWidthPct;
-
-        pieceEl.style.left = leftPct + '%';
-        pieceEl.style.width = pieceWidthPct + '%';
+        setPiecePosition(pieceEl, index, imgPrefix);
 
         pieceEl.innerHTML = `<img src="images/puzzle/${imgPrefix}-${index}.png?v=${IMG_VERSION}" alt="">`;
         board.appendChild(pieceEl);
@@ -1340,10 +1358,77 @@ function setupPuzzle(imgPrefix, total) {
         hint.textContent = `已镶嵌：${placed.size} / ${total} 片`;
 
         if (placed.size === total) {
-            btnNext.disabled = false;
-            hint.textContent = '✓ 全部镶嵌完成！';
-            toast('镶嵌完成！');
+            setTimeout(() => {
+                showCompleteImage();
+            }, 500);
         }
+    }
+
+    function setPiecePosition(el, index, prefix) {
+        switch(prefix) {
+            case 'mudan':
+                setMudanPosition(el, index);
+                break;
+            case 'fenghuang':
+                setFenghuangPosition(el, index);
+                break;
+            case 'long':
+                setLongPosition(el, index);
+                break;
+            default:
+                break;
+        }
+    }
+
+    function setMudanPosition(el, index) {
+        el.style.position = 'absolute';
+        el.style.left = '0%';
+        el.style.top = '0%';
+        el.style.width = '100%';
+        el.style.height = '100%';
+    }
+
+    function setFenghuangPosition(el, index) {
+        el.style.position = 'absolute';
+        el.style.left = '0%';
+        el.style.top = '0%';
+        el.style.width = '100%';
+        el.style.height = '100%';
+    }
+
+    function setLongPosition(el, index) {
+        el.style.position = 'absolute';
+        el.style.left = '0%';
+        el.style.top = '0%';
+        el.style.width = '100%';
+        el.style.height = '100%';
+    }
+
+    function showCompleteImage() {
+        const boardWrap = board.parentElement;
+        
+        // 隐藏所有拼图块
+        const placedPieces = board.querySelectorAll('.puzzle-piece-board');
+        placedPieces.forEach(p => p.style.opacity = '0');
+        
+        // 添加完整图片
+        const completeImg = document.createElement('img');
+        completeImg.src = `images/puzzle/${imgPrefix}-preview.jpg?v=${IMG_VERSION}`;
+        completeImg.className = 'puzzle-complete';
+        completeImg.style.opacity = '0';
+        boardWrap.appendChild(completeImg);
+        
+        // 淡入效果
+        setTimeout(() => {
+            completeImg.style.opacity = '1';
+            toast('✓ 镶嵌完成！');
+        }, 100);
+        
+        // 显示完成按钮
+        setTimeout(() => {
+            btnNext.disabled = false;
+            hint.textContent = '✓ 镶嵌完成！瓷片完美拼接！';
+        }, 800);
     }
 }
 
@@ -1359,9 +1444,9 @@ function finishInlay() {
 function renderS6() {
     const lv = state.level;
     app.innerHTML = `
-        ${topBar('线条修整 · ' + lv.title, 'level', '第六步 · 线条修整', 6)}
+        ${topBar('线条修整 · ' + lv.title, 'level', '第五步 · 线条修整', 5)}
         <div class="card">
-            <h2>第六步 · 线条描摹修整</h2>
+            <h2>第五步 · 线条描摹修整</h2>
             <p class="muted">顺着虚线轨迹描摹一遍，模拟匠人补缝、修边、整形。贴合度越高，作品越精美。</p>
 
             <div class="trace-wrap" id="trace-wrap">
@@ -1374,6 +1459,9 @@ function renderS6() {
             <div class="btn-row">
                 <button class="btn ghost" onclick="go('s6')">↻ 重新描摹</button>
                 <button class="btn" id="btn-trace-next" disabled onclick="finishTrace()">完成 →</button>
+                <!-- DEBUG: 调试跳过按钮，后期删除 -->
+                <button class="btn debug-skip" onclick="debugSkip('finish')" style="background:#ff6b6b;color:white">调试跳过</button>
+                <!-- DEBUG END -->
             </div>
         </div>
     `;
@@ -1551,7 +1639,7 @@ function finishTrace() {
 function renderFinale() {
     const lv = state.level;
     app.innerHTML = `
-        ${topBar('通关 · ' + lv.title, 'level', '第六步完成', 6)}
+        ${topBar('通关 · ' + lv.title, 'level', '第五步完成', 5)}
         <div class="card finale">
             <div class="finale-emoji">🏆</div>
             <div class="finale-title">恭喜你完成潮汕嵌瓷非遗手工体验！</div>
