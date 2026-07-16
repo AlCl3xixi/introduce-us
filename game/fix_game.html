@@ -508,8 +508,16 @@
         touch-action: none;
         box-shadow: 0 4px 12px rgba(0,0,0,0.06) inset;
     }
+    #trace-bg {
+        position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+        object-fit: contain;
+        opacity: 0.55;
+        pointer-events: none;
+        z-index: 0;
+    }
     #trace-canvas, #trace-overlay {
         position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+        z-index: 1;
     }
     .trace-hint { text-align: center; margin-top: 10px; color: #868e96; font-size: 13px; }
     .accuracy { text-align: center; font-size: 15px; color: #4c6ef5; margin-top: 8px; font-weight: 700; letter-spacing: 2px; }
@@ -553,6 +561,64 @@
 
     /* ========== 清理旧的 tile/slot 配色，让彩色块上面的覆盖生效 ========== */
     .slot.tile-slot { background: #e7f5ff; color: #1864ab; border-color: #74c0fc; }
+
+    /* ========== 加载动画 ========== */
+    .loading-wrap {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(61, 40, 23, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+    }
+    .loading-content {
+        width: 80%;
+        max-width: 320px;
+        background: linear-gradient(180deg, rgba(255, 250, 239, 0.95) 0%, rgba(255, 243, 223, 0.9) 100%);
+        border: 2px solid rgba(200, 156, 108, 0.6);
+        border-radius: 20px;
+        padding: 32px 24px;
+        box-shadow: 0 12px 32px rgba(122, 79, 45, 0.3);
+        text-align: center;
+    }
+    .loading-spinner {
+        width: 56px;
+        height: 56px;
+        margin: 0 auto 16px;
+        border: 4px solid rgba(200, 156, 108, 0.2);
+        border-top-color: #c89c6c;
+        border-radius: 50%;
+        animation: spin 1.2s linear infinite;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    .loading-bar {
+        height: 8px;
+        background: rgba(200, 156, 108, 0.15);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 12px;
+    }
+    .loading-progress {
+        height: 100%;
+        background: linear-gradient(90deg, #c89c6c, #a87746);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+        min-width: 0;
+    }
+    .loading-text {
+        color: #7a4f2d;
+        font-size: 15px;
+        letter-spacing: 2px;
+        font-weight: 600;
+    }
 
     /* ========== footer ========== */
     .footer-text { text-align: center; color: #868e96; font-size: 12px; margin-top: 20px; letter-spacing: 1px; }
@@ -686,15 +752,40 @@ function toast(msg, ms = 1500) {
     toast._t = setTimeout(() => toastEl.classList.remove('show'), ms);
 }
 
-function preloadImages(urls) {
+function preloadImages(urls, onProgress) {
+    let loaded = 0;
+    const total = urls.length;
+    
     return Promise.all(urls.map(url => {
         return new Promise((resolve) => {
             const img = new Image();
-            img.onload = () => resolve({ url, ok: true });
-            img.onerror = () => resolve({ url, ok: false });
+            img.onload = () => {
+                loaded++;
+                if (onProgress) onProgress(Math.round((loaded / total) * 100));
+                resolve({ url, ok: true });
+            };
+            img.onerror = () => {
+                loaded++;
+                if (onProgress) onProgress(Math.round((loaded / total) * 100));
+                resolve({ url, ok: false });
+            };
             img.src = url;
         });
     }));
+}
+
+function renderLoading() {
+    app.innerHTML = `
+        <div class="loading-wrap">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <div class="loading-bar">
+                    <div class="loading-progress" id="loading-progress" style="width: 0%"></div>
+                </div>
+                <div class="loading-text" id="loading-text">准备材料中…</div>
+            </div>
+        </div>
+    `;
 }
 
 function stepDots(current) {
@@ -767,7 +858,7 @@ function renderHome() {
         </div>
 
         <div class="btn-row">
-            <button class="btn" onclick="go('level')">开始体验 →</button>
+            <button class="btn" onclick="go('s2')">开始体验 →</button>
         </div>
 
         <div class="footer-text">共 3 个关卡 · 每关 6 道工序</div>
@@ -790,9 +881,9 @@ function renderLevelSelect() {
     `).join('');
 
     app.innerHTML = `
-        ${topBar('选择图纸', 'home', '第一步 · 图纸规划', 1)}
+        ${topBar('选择图纸', 'home', '第二步 · 图纸规划', 2)}
         <div class="card">
-            <h2>第一步 · 图纸规划</h2>
+            <h2>第二步 · 图纸规划</h2>
             <p class="muted">选择一张图纸开始体验。不同难度将决定后续每一步的模块数量与力度区间宽度。</p>
             <div class="levels">${cards}</div>
         </div>
@@ -804,7 +895,6 @@ function startLevel(id) {
     state.level = lv;
     state.progress = [];
 
-    // 预加载当前关卡的瓷片图+拼图
     const urls = [];
     for (let i = 1; i <= lv.pressCount; i++) {
         urls.push(`images/ceramic/${lv.imgPrefix}-${i}-whole.png?v=${IMG_VERSION}`);
@@ -815,9 +905,15 @@ function startLevel(id) {
     }
     urls.push(`images/puzzle/${lv.imgPrefix}-preview.jpg?v=${IMG_VERSION}`);
 
-    toast('加载中…', 5000);
-    preloadImages(urls).then(() => {
-        go('s2');
+    renderLoading();
+
+    preloadImages(urls, (progress) => {
+        const progressEl = document.getElementById('loading-progress');
+        const textEl = document.getElementById('loading-text');
+        if (progressEl) progressEl.style.width = progress + '%';
+        if (textEl) textEl.textContent = `准备材料中… ${progress}%`;
+    }).then(() => {
+        go('s4');
     });
 }
 
@@ -827,11 +923,10 @@ function startLevel(id) {
 // 正确比例：贝壳灰 4 : 纸筋 2 : 红糖 1
 // =========================================================
 function renderS2() {
-    const lv = state.level;
     app.innerHTML = `
-        ${topBar('调配灰浆 · ' + lv.title, 'level', '第二步 · 调配灰浆', 2)}
+        ${topBar('调配灰浆', 'home', '第一步 · 调配灰浆', 1)}
         <div class="card">
-            <h2>第二步 · 调配灰浆</h2>
+            <h2>第一步 · 调配灰浆</h2>
             <p class="muted">传统嵌瓷专用灰浆：<br><strong>贝壳灰 4 : 纸筋 2 : 红糖 1</strong><br>依次点击投料，凑齐精准份数。</p>
 
             <div class="mortar">
@@ -855,7 +950,7 @@ function renderS2() {
                 <button class="btn ghost" onclick="resetMortar()">重置</button>
                 <button class="btn" id="submit-mortar" onclick="submitMortar()" disabled>配比完成后解锁</button>
                 <!-- DEBUG: 调试跳过按钮，后期删除 -->
-                <button class="btn debug-skip" onclick="debugSkip('s4')" style="background:#ff6b6b;color:white">调试跳过</button>
+                <button class="btn debug-skip" onclick="go('level')" style="background:#ff6b6b;color:white">调试跳过</button>
                 <!-- DEBUG END -->
             </div>
             <p class="muted" style="margin-top:10px" id="mortar-hint">目标：4 : 2 : 1</p>
@@ -891,7 +986,7 @@ function updateMortar() {
 function submitMortar() {
     toast('灰浆调配完成！');
     state.progress.push('s2');
-    go('s4');
+    go('level');
 }
 
 // ---------- 拖拽通用引擎 ----------
@@ -995,9 +1090,9 @@ function renderS4() {
     const total = lv.pressCount;
 
     app.innerHTML = `
-        ${topBar('剪饶控力 · ' + lv.title, 'level', '第三步 · 剪饶控力', 3)}
+        ${topBar('剪饶控力 · ' + lv.title, 'level', '第四步 · 剪饶控力', 4)}
         <div class="card">
-            <h2>第三步 · 剪饶控力</h2>
+            <h2>第四步 · 剪饶控力</h2>
             <p class="muted">长按下方按钮，控制力度停在绿色合格区。<br>灰色=不足，绿色=合格，红色=过大。</p>
 
             <div class="ceramic">
@@ -1148,9 +1243,9 @@ function renderS5() {
     `).join('');
 
     app.innerHTML = `
-        ${topBar('瓷片镶嵌 · ' + lv.title, 'level', '第四步 · 瓷片镶嵌', 4)}
+        ${topBar('瓷片镶嵌 · ' + lv.title, 'level', '第五步 · 瓷片镶嵌', 5)}
         <div class="card">
-            <h2>第四步 · 瓷片镶嵌</h2>
+            <h2>第五步 · 瓷片镶嵌</h2>
             <p class="muted">把下方的瓷片碎片拖到框里，拼成完整的图案。</p>
 
             <div class="puzzle-preview">
@@ -1228,6 +1323,7 @@ function setupPuzzle(imgPrefix, total) {
         ghost.style.left = rect.left + 'px';
         ghost.style.top = rect.top + 'px';
         ghost.style.height = rect.height + 'px';
+        ghost.style.width = rect.width + 'px';
         document.body.appendChild(ghost);
 
         document.addEventListener('mousemove', onDrag);
@@ -1444,12 +1540,13 @@ function finishInlay() {
 function renderS6() {
     const lv = state.level;
     app.innerHTML = `
-        ${topBar('线条修整 · ' + lv.title, 'level', '第五步 · 线条修整', 5)}
+        ${topBar('线条修整 · ' + lv.title, 'level', '第六步 · 线条修整', 6)}
         <div class="card">
-            <h2>第五步 · 线条描摹修整</h2>
+            <h2>第六步 · 线条描摹修整</h2>
             <p class="muted">顺着虚线轨迹描摹一遍，模拟匠人补缝、修边、整形。贴合度越高，作品越精美。</p>
 
             <div class="trace-wrap" id="trace-wrap">
+                <img id="trace-bg" src="images/puzzle/${lv.imgPrefix}-preview.jpg" alt="背景参考">
                 <svg id="trace-overlay"></svg>
                 <canvas id="trace-canvas"></canvas>
             </div>
@@ -1469,6 +1566,182 @@ function renderS6() {
     setupTrace(lv);
 }
 
+function extractImageContour(img) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    const maxDim = 300;
+    let w = img.width;
+    let h = img.height;
+    if (w > maxDim || h > maxDim) {
+        const ratio = Math.min(maxDim / w, maxDim / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+    }
+    canvas.width = w;
+    canvas.height = h;
+    
+    try {
+        ctx.drawImage(img, 0, 0, w, h);
+    } catch (e) {
+        console.warn('图片绘制失败，可能存在跨域问题:', e);
+        return generateFallbackContour(w, h);
+    }
+    
+    const imageData = ctx.getImageData(0, 0, w, h);
+    const data = imageData.data;
+    const gray = new Uint8Array(w * h);
+    
+    for (let i = 0; i < w * h; i++) {
+        const idx = i * 4;
+        gray[i] = Math.round(0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2]);
+    }
+    
+    const blurRadius = 3;
+    const blurred = new Uint8Array(w * h);
+    const kernelSize = blurRadius * 2 + 1;
+    const kernel = [];
+    let sum = 0;
+    for (let ky = -blurRadius; ky <= blurRadius; ky++) {
+        for (let kx = -blurRadius; kx <= blurRadius; kx++) {
+            const val = Math.exp(-(kx * kx + ky * ky) / (2 * blurRadius * blurRadius));
+            kernel.push(val);
+            sum += val;
+        }
+    }
+    for (let i = 0; i < kernel.length; i++) kernel[i] /= sum;
+    
+    for (let y = blurRadius; y < h - blurRadius; y++) {
+        for (let x = blurRadius; x < w - blurRadius; x++) {
+            let val = 0;
+            let ki = 0;
+            for (let ky = -blurRadius; ky <= blurRadius; ky++) {
+                for (let kx = -blurRadius; kx <= blurRadius; kx++) {
+                    val += gray[(y + ky) * w + (x + kx)] * kernel[ki++];
+                }
+            }
+            blurred[y * w + x] = Math.round(val);
+        }
+    }
+    for (let i = 0; i < w * h; i++) {
+        if (blurred[i] === 0) blurred[i] = gray[i];
+    }
+    
+    const edges = new Uint8Array(w * h);
+    const threshold = 35;
+    
+    for (let y = 1; y < h - 1; y++) {
+        for (let x = 1; x < w - 1; x++) {
+            const idx = y * w + x;
+            const gx = blurred[idx - w + 1] - blurred[idx - w - 1] +
+                       2 * blurred[idx + 1] - 2 * blurred[idx - 1] +
+                       blurred[idx + w + 1] - blurred[idx + w - 1];
+            const gy = blurred[idx - w - 1] - blurred[idx + w - 1] +
+                       2 * blurred[idx - w] - 2 * blurred[idx + w] +
+                       blurred[idx - w + 1] - blurred[idx + w + 1];
+            edges[idx] = Math.sqrt(gx * gx + gy * gy);
+        }
+    }
+    
+    const visited = new Uint8Array(w * h);
+    const contours = [];
+    
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            if (edges[y * w + x] > threshold && visited[y * w + x] === 0) {
+                const contour = [];
+                let cx = x, cy = y;
+                
+                while (edges[cy * w + cx] > threshold && visited[cy * w + cx] === 0) {
+                    visited[cy * w + cx] = 1;
+                    contour.push([cx, cy]);
+                    
+                    let found = false;
+                    for (let dy = -1; dy <= 1 && !found; dy++) {
+                        for (let dx = -1; dx <= 1 && !found; dx++) {
+                            if (dx === 0 && dy === 0) continue;
+                            const nx = cx + dx;
+                            const ny = cy + dy;
+                            if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+                                if (edges[ny * w + nx] > threshold && visited[ny * w + nx] === 0) {
+                                    cx = nx;
+                                    cy = ny;
+                                    found = true;
+                                }
+                            }
+                        }
+                    }
+                    if (!found) break;
+                }
+                
+                if (contour.length >= 20) {
+                    contours.push(contour);
+                }
+            }
+        }
+    }
+    
+    if (contours.length === 0) {
+        const edgePoints = [];
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                if (edges[y * w + x] > threshold) {
+                    edgePoints.push([x, y]);
+                }
+            }
+        }
+        if (edgePoints.length === 0) {
+            return generateFallbackContour(w, h);
+        }
+        contours.push(edgePoints);
+    }
+    
+    let largestContour = contours[0];
+    for (let i = 1; i < contours.length; i++) {
+        if (contours[i].length > largestContour.length) {
+            largestContour = contours[i];
+        }
+    }
+    
+    const targetCount = 150;
+    const step = Math.max(1, Math.floor(largestContour.length / targetCount));
+    const sampled = [];
+    
+    for (let i = 0; i < largestContour.length; i += step) {
+        sampled.push(largestContour[i]);
+    }
+    
+    if (sampled.length < 40) {
+        return generateFallbackContour(w, h);
+    }
+    
+    const smoothed = [];
+    const smoothRadius = 3;
+    for (let i = 0; i < sampled.length; i++) {
+        let sumX = 0, sumY = 0, count = 0;
+        for (let k = -smoothRadius; k <= smoothRadius; k++) {
+            const idx = (i + k + sampled.length) % sampled.length;
+            sumX += sampled[idx][0];
+            sumY += sampled[idx][1];
+            count++;
+        }
+        smoothed.push([sumX / count, sumY / count]);
+    }
+    
+    return smoothed;
+}
+
+function generateFallbackContour(w, h) {
+    const cx = w / 2, cy = h / 2;
+    const r = Math.min(w, h) * 0.35;
+    const pts = [];
+    for (let i = 0; i <= 80; i++) {
+        const t = (i / 80) * Math.PI * 2;
+        pts.push([cx + Math.cos(t) * r, cy + Math.sin(t) * r]);
+    }
+    return pts;
+}
+
 function setupTrace(lv) {
     const wrap = document.getElementById('trace-wrap');
     const svg = document.getElementById('trace-overlay');
@@ -1484,20 +1757,16 @@ function setupTrace(lv) {
     sizeCanvas();
     window.addEventListener('resize', sizeCanvas);
 
-    // 生成一条闭合的花/凤/龙的简化轮廓
     function buildPath(w, h, type) {
-        // 返回SVG的路径点（用于虚线）
         const cx = w / 2, cy = h / 2;
         let pts = [];
         if (type === '牡丹花') {
-            // 花瓣形：6 个凸起
             for (let i = 0; i <= 120; i++) {
                 const t = (i / 120) * Math.PI * 2;
                 const r = Math.min(w, h) * (0.28 + 0.15 * Math.cos(6 * t));
                 pts.push([cx + Math.cos(t) * r, cy + Math.sin(t) * r]);
             }
         } else if (type === '凤凰') {
-            // 椭圆 + 尖尾
             for (let i = 0; i <= 120; i++) {
                 const t = i / 120;
                 const x = w * (0.15 + t * 0.7);
@@ -1506,7 +1775,6 @@ function setupTrace(lv) {
                 pts.push([x, y]);
             }
         } else {
-            // 龙：波浪线
             for (let i = 0; i <= 160; i++) {
                 const t = i / 160;
                 const x = w * (0.1 + t * 0.8);
@@ -1517,7 +1785,36 @@ function setupTrace(lv) {
         return pts;
     }
 
-    const pts = buildPath(canvas.width, canvas.height, lv.title);
+    function loadContourFromImage() {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            const contourPoints = extractImageContour(img);
+            const mappedPoints = mapContourToCanvas(contourPoints, img.width, img.height);
+            initTrace(mappedPoints);
+        };
+        img.onerror = () => {
+            console.warn('图片加载失败，使用备用路径');
+            const fallbackPts = buildPath(canvas.width, canvas.height, lv.title);
+            initTrace(fallbackPts);
+        };
+        img.src = `images/puzzle/${lv.imgPrefix}-preview.jpg`;
+    }
+
+    function mapContourToCanvas(contourPoints, imgW, imgH) {
+        const padding = Math.min(canvas.width, canvas.height) * 0.15;
+        const availableW = canvas.width - padding * 2;
+        const availableH = canvas.height - padding * 2;
+        const scale = Math.min(availableW / imgW, availableH / imgH);
+        const offsetX = padding + (availableW - imgW * scale) / 2;
+        const offsetY = padding + (availableH - imgH * scale) / 2;
+        return contourPoints.map(pt => [
+            pt[0] * scale + offsetX,
+            pt[1] * scale + offsetY
+        ]);
+    }
+
+    function initTrace(pts) {
 
     // 画虚线
     svg.setAttribute('width', canvas.width);
@@ -1619,12 +1916,15 @@ function setupTrace(lv) {
         return { x: t.clientX - rect.left, y: t.clientY - rect.top };
     }
 
-    canvas.addEventListener('mousedown', handleStart);
-    canvas.addEventListener('mousemove', handleMove);
-    document.addEventListener('mouseup', handleEnd);
-    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleStart(e); }, { passive: false });
-    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e); }, { passive: false });
-    canvas.addEventListener('touchend', handleEnd);
+        canvas.addEventListener('mousedown', handleStart);
+        canvas.addEventListener('mousemove', handleMove);
+        document.addEventListener('mouseup', handleEnd);
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleStart(e); }, { passive: false });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e); }, { passive: false });
+        canvas.addEventListener('touchend', handleEnd);
+    }
+
+    loadContourFromImage();
 }
 
 function finishTrace() {
@@ -1639,7 +1939,7 @@ function finishTrace() {
 function renderFinale() {
     const lv = state.level;
     app.innerHTML = `
-        ${topBar('通关 · ' + lv.title, 'level', '第五步完成', 5)}
+        ${topBar('通关 · ' + lv.title, 'level', '第六步完成', 6)}
         <div class="card finale">
             <div class="finale-emoji">🏆</div>
             <div class="finale-title">恭喜你完成潮汕嵌瓷非遗手工体验！</div>

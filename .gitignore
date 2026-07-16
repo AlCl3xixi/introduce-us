@@ -27,3 +27,6 @@ __pycache__/
 tmp/
 temp/
 *.tmp
+
+# Trae spec files
+.trae/
