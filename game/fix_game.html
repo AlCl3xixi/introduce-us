@@ -1566,7 +1566,7 @@ function renderS6() {
     setupTrace(lv);
 }
 
-function extractImageContour(img) {
+function extractImageContour(img, mode = 'edge') {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
@@ -1590,6 +1590,105 @@ function extractImageContour(img) {
     
     const imageData = ctx.getImageData(0, 0, w, h);
     const data = imageData.data;
+    
+    if (mode === 'white') {
+        const visited = new Uint8Array(w * h);
+        const contours = [];
+        
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const idx = (y * w + x) * 4;
+                const r = data[idx];
+                const g = data[idx + 1];
+                const b = data[idx + 2];
+                const brightness = (r + g + b) / 3;
+                
+                if (brightness > 200 && visited[y * w + x] === 0) {
+                    const contour = [];
+                    let cx = x, cy = y;
+                    
+                    while (true) {
+                        if (cx < 0 || cx >= w || cy < 0 || cy >= h) break;
+                        const pixelIdx = (cy * w + cx) * 4;
+                        const pxR = data[pixelIdx];
+                        const pxG = data[pixelIdx + 1];
+                        const pxB = data[pixelIdx + 2];
+                        const pxBright = (pxR + pxG + pxB) / 3;
+                        
+                        if (pxBright <= 200 || visited[cy * w + cx] === 1) break;
+                        
+                        visited[cy * w + cx] = 1;
+                        contour.push([cx, cy]);
+                        
+                        let found = false;
+                        for (let dy = -1; dy <= 1 && !found; dy++) {
+                            for (let dx = -1; dx <= 1 && !found; dx++) {
+                                if (dx === 0 && dy === 0) continue;
+                                const nx = cx + dx;
+                                const ny = cy + dy;
+                                if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+                                    const nIdx = (ny * w + nx) * 4;
+                                    const nr = data[nIdx];
+                                    const ng = data[nIdx + 1];
+                                    const nb = data[nIdx + 2];
+                                    const nBright = (nr + ng + nb) / 3;
+                                    if (nBright > 200 && visited[ny * w + nx] === 0) {
+                                        cx = nx;
+                                        cy = ny;
+                                        found = true;
+                                    }
+                                }
+                            }
+                        }
+                        if (!found) break;
+                    }
+                    
+                    if (contour.length >= 20) {
+                        contours.push(contour);
+                    }
+                }
+            }
+        }
+        
+        if (contours.length === 0) {
+            return generateFallbackContour(w, h);
+        }
+        
+        let largestContour = contours[0];
+        for (let i = 1; i < contours.length; i++) {
+            if (contours[i].length > largestContour.length) {
+                largestContour = contours[i];
+            }
+        }
+        
+        const targetCount = 150;
+        const step = Math.max(1, Math.floor(largestContour.length / targetCount));
+        const sampled = [];
+        
+        for (let i = 0; i < largestContour.length; i += step) {
+            sampled.push(largestContour[i]);
+        }
+        
+        if (sampled.length < 40) {
+            return generateFallbackContour(w, h);
+        }
+        
+        const smoothed = [];
+        const smoothRadius = 3;
+        for (let i = 0; i < sampled.length; i++) {
+            let sumX = 0, sumY = 0, count = 0;
+            for (let k = -smoothRadius; k <= smoothRadius; k++) {
+                const idx = (i + k + sampled.length) % sampled.length;
+                sumX += sampled[idx][0];
+                sumY += sampled[idx][1];
+                count++;
+            }
+            smoothed.push([sumX / count, sumY / count]);
+        }
+        
+        return smoothed;
+    }
+    
     const gray = new Uint8Array(w * h);
     
     for (let i = 0; i < w * h; i++) {
@@ -1788,17 +1887,26 @@ function setupTrace(lv) {
     function loadContourFromImage() {
         const img = new Image();
         img.crossOrigin = 'anonymous';
+        
+        let contourMode = 'edge';
+        let imgPath = `images/puzzle/${lv.imgPrefix}-preview.jpg`;
+        
+        if (lv.imgPrefix === 'fenghuang') {
+            imgPath = `images/puzzle/fenghuang-delineate.jpg`;
+            contourMode = 'white';
+        }
+        
         img.onload = () => {
-            const contourPoints = extractImageContour(img);
+            const contourPoints = extractImageContour(img, contourMode);
             const mappedPoints = mapContourToCanvas(contourPoints, img.width, img.height);
             initTrace(mappedPoints);
         };
         img.onerror = () => {
-            console.warn('图片加载失败，使用备用路径');
+            console.warn('轮廓图片加载失败，使用备用路径');
             const fallbackPts = buildPath(canvas.width, canvas.height, lv.title);
             initTrace(fallbackPts);
         };
-        img.src = `images/puzzle/${lv.imgPrefix}-preview.jpg`;
+        img.src = imgPath;
     }
 
     function mapContourToCanvas(contourPoints, imgW, imgH) {
