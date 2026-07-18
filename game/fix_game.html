@@ -897,8 +897,8 @@ function startLevel(id) {
 
     const urls = [];
     for (let i = 1; i <= lv.pressCount; i++) {
-        urls.push(`images/ceramic/${lv.imgPrefix}-${i}-whole.png?v=${IMG_VERSION}`);
-        urls.push(`images/ceramic/${lv.imgPrefix}-${i}-broken.png?v=${IMG_VERSION}`);
+        urls.push(`images/ceramic/${lv.imgPrefix}-${i}-whole.webp?v=${IMG_VERSION}`);
+        urls.push(`images/ceramic/${lv.imgPrefix}-${i}-broken.webp?v=${IMG_VERSION}`);
     }
     for (let i = 1; i <= lv.puzzleCount; i++) {
         urls.push(`images/puzzle/${lv.imgPrefix}-${i}.png?v=${IMG_VERSION}`);
@@ -1097,7 +1097,7 @@ function renderS4() {
 
             <div class="ceramic">
                 <img class="ceramic-img" id="ceramic-img" 
-                     src="images/ceramic/${lv.imgPrefix}-1-whole.png?v=${IMG_VERSION}" 
+                     src="images/ceramic/${lv.imgPrefix}-1-whole.webp?v=${IMG_VERSION}" 
                      alt="瓷片">
             </div>
 
@@ -1122,8 +1122,8 @@ function renderS4() {
     // 预加载当前关卡所有瓷片图
     const urls = [];
     for (let i = 1; i <= total; i++) {
-        urls.push(`images/ceramic/${lv.imgPrefix}-${i}-whole.png?v=${IMG_VERSION}`);
-        urls.push(`images/ceramic/${lv.imgPrefix}-${i}-broken.png?v=${IMG_VERSION}`);
+        urls.push(`images/ceramic/${lv.imgPrefix}-${i}-whole.webp?v=${IMG_VERSION}`);
+        urls.push(`images/ceramic/${lv.imgPrefix}-${i}-broken.webp?v=${IMG_VERSION}`);
     }
     preloadImages(urls).then(results => {
         const failed = results.filter(r => !r.ok);
@@ -1181,7 +1181,7 @@ function renderS4() {
             img.style.transition = 'opacity 0.15s';
             img.style.opacity = '0';
             setTimeout(() => {
-                img.src = `images/ceramic/${lv.imgPrefix}-${currentIndex}-broken.png?v=${IMG_VERSION}`;
+                img.src = `images/ceramic/${lv.imgPrefix}-${currentIndex}-broken.webp?v=${IMG_VERSION}`;
                 img.style.opacity = '1';
                 img.classList.add('broken');
                 toast('✓ 剪碎成功！');
@@ -1195,7 +1195,7 @@ function renderS4() {
                         // 换下一张完整的
                         img.style.opacity = '0';
                         setTimeout(() => {
-                            img.src = `images/ceramic/${lv.imgPrefix}-${currentIndex}-whole.png?v=${IMG_VERSION}`;
+                            img.src = `images/ceramic/${lv.imgPrefix}-${currentIndex}-whole.webp?v=${IMG_VERSION}`;
                             img.style.opacity = '1';
                         }, 100);
                         countEl.textContent = `第 ${currentIndex} / ${total} 片`;
@@ -2394,41 +2394,51 @@ function setupTrace(lv) {
     ];
     
     function loadContourFromImage() {
-        const img = new Image();
+        let contourPoints;
+        let imgW = 400;
+        let imgH = 400;
         
+        if (lv.imgPrefix === 'fenghuang') {
+            contourPoints = FENGHUANG_CONTOUR_POINTS;
+            imgW = 380;
+            imgH = 400;
+        } else if (lv.imgPrefix === 'mudan') {
+            contourPoints = MUDAN_CONTOUR_POINTS;
+            imgW = 400;
+            imgH = 385;
+        } else if (lv.imgPrefix === 'long') {
+            contourPoints = LONG_CONTOUR_POINTS;
+            imgW = 400;
+            imgH = 310;
+        }
+        
+        if (contourPoints) {
+            console.log('使用预提取轮廓点:', contourPoints.length, 'img:', imgW, 'x', imgH);
+            const mappedPoints = mapContourToCanvas(contourPoints, imgW, imgH);
+            initTrace(mappedPoints);
+            return;
+        }
+        
+        const img = new Image();
         let contourMode = 'edge';
         let imgPath = `images/puzzle/${lv.imgPrefix}-preview.jpg`;
         
         if (lv.imgPrefix === 'fenghuang') {
-            imgPath = `images/puzzle/fenghuang-delineate.png?v=${Date.now()}`;
+            imgPath = `images/puzzle/fenghuang-delineate.webp?v=${Date.now()}`;
             contourMode = 'alpha';
         } else if (lv.imgPrefix === 'mudan') {
-            imgPath = `images/puzzle/mudan-delineate.png?v=${Date.now()}`;
+            imgPath = `images/puzzle/mudan-delineate.webp?v=${Date.now()}`;
             contourMode = 'alpha';
         } else if (lv.imgPrefix === 'long') {
-            imgPath = `images/puzzle/long-delineate.png?v=${Date.now()}`;
+            imgPath = `images/puzzle/long-delineate.webp?v=${Date.now()}`;
             contourMode = 'alpha';
         }
         
         img.onload = () => {
             console.log('Contour image loaded:', img.width, 'x', img.height, 'mode:', contourMode);
-            
-            let contourPoints;
-            if (lv.imgPrefix === 'fenghuang') {
-                contourPoints = FENGHUANG_CONTOUR_POINTS;
-                console.log('使用预提取凤凰轮廓点:', contourPoints.length);
-            } else if (lv.imgPrefix === 'mudan') {
-                contourPoints = MUDAN_CONTOUR_POINTS;
-                console.log('使用预提取牡丹轮廓点:', contourPoints.length);
-            } else if (lv.imgPrefix === 'long') {
-                contourPoints = LONG_CONTOUR_POINTS;
-                console.log('使用预提取龙轮廓点:', contourPoints.length);
-            } else {
-                contourPoints = extractImageContour(img, contourMode);
-                console.log('Contour points extracted:', contourPoints.length);
-            }
-            
-            const mappedPoints = mapContourToCanvas(contourPoints, img.width, img.height);
+            const extractedPoints = extractImageContour(img, contourMode);
+            console.log('Contour points extracted:', extractedPoints.length);
+            const mappedPoints = mapContourToCanvas(extractedPoints, img.width, img.height);
             initTrace(mappedPoints);
         };
         img.onerror = () => {
