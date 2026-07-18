@@ -139,15 +139,20 @@ document.addEventListener('DOMContentLoaded', () => {
 // ------------------------------------------------------------
 // 6. 游戏图片预加载
 //    在用户浏览主页面时后台加载游戏资源，提升进入游戏的速度
+//    分优先级加载：高优先级立即加载，中优先级延迟加载，低优先级空闲时加载
 // ------------------------------------------------------------
 function preloadGameImages() {
-    const gameImages = [
+    const highPriority = [
         'game/images/bg.jpg',
         'game/images/covers/mudan.jpg',
         'game/images/covers/fenghuang.jpg',
         'game/images/covers/long.jpg',
-        
         'game/images/puzzle/mudan-preview.jpg',
+        'game/images/puzzle/fenghuang-preview.jpg',
+        'game/images/puzzle/long-preview.jpg',
+    ];
+    
+    const mediumPriority = [
         'game/images/puzzle/mudan-full.jpg',
         'game/images/puzzle/mudan-1.png',
         'game/images/puzzle/mudan-2.png',
@@ -155,8 +160,6 @@ function preloadGameImages() {
         'game/images/puzzle/mudan-1-s.png',
         'game/images/puzzle/mudan-2-s.png',
         'game/images/puzzle/mudan-3-s.png',
-        
-        'game/images/puzzle/fenghuang-preview.jpg',
         'game/images/puzzle/fenghuang-1.png',
         'game/images/puzzle/fenghuang-2.png',
         'game/images/puzzle/fenghuang-3.png',
@@ -165,8 +168,6 @@ function preloadGameImages() {
         'game/images/puzzle/fenghuang-2-s.png',
         'game/images/puzzle/fenghuang-3-s.png',
         'game/images/puzzle/fenghuang-4-s.png',
-        
-        'game/images/puzzle/long-preview.jpg',
         'game/images/puzzle/long-1.png',
         'game/images/puzzle/long-2.png',
         'game/images/puzzle/long-3.png',
@@ -177,19 +178,18 @@ function preloadGameImages() {
         'game/images/puzzle/long-3-s.png',
         'game/images/puzzle/long-4-s.png',
         'game/images/puzzle/long-5-s.png',
-        
-        // 轮廓图片（线条描摹关卡）
+    ];
+    
+    const lowPriority = [
         'game/images/puzzle/mudan-delineate.webp',
         'game/images/puzzle/fenghuang-delineate.webp',
         'game/images/puzzle/long-delineate.webp',
-        
         'game/images/ceramic/mudan-1-whole.webp',
         'game/images/ceramic/mudan-1-broken.webp',
         'game/images/ceramic/mudan-2-whole.webp',
         'game/images/ceramic/mudan-2-broken.webp',
         'game/images/ceramic/mudan-3-whole.webp',
         'game/images/ceramic/mudan-3-broken.webp',
-        
         'game/images/ceramic/fenghuang-1-whole.webp',
         'game/images/ceramic/fenghuang-1-broken.webp',
         'game/images/ceramic/fenghuang-2-whole.webp',
@@ -198,7 +198,6 @@ function preloadGameImages() {
         'game/images/ceramic/fenghuang-3-broken.webp',
         'game/images/ceramic/fenghuang-4-whole.webp',
         'game/images/ceramic/fenghuang-4-broken.webp',
-        
         'game/images/ceramic/long-1-whole.webp',
         'game/images/ceramic/long-1-broken.webp',
         'game/images/ceramic/long-2-whole.webp',
@@ -211,8 +210,26 @@ function preloadGameImages() {
         'game/images/ceramic/long-5-broken.webp',
     ];
     
-    gameImages.forEach(src => {
-        const img = new Image();
-        img.src = src;
-    });
+    function loadImages(urls) {
+        urls.forEach(src => {
+            const img = new Image();
+            img.src = src;
+        });
+    }
+    
+    loadImages(highPriority);
+    
+    setTimeout(() => {
+        loadImages(mediumPriority);
+    }, 500);
+    
+    if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => {
+            loadImages(lowPriority);
+        }, { timeout: 3000 });
+    } else {
+        setTimeout(() => {
+            loadImages(lowPriority);
+        }, 1500);
+    }
 }
