@@ -821,16 +821,6 @@ function go(screen, opts = {}) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// DEBUG: 调试跳过函数，后期删除
-function debugSkip(target) {
-    if (target === 'finish') {
-        go('finale');
-    } else {
-        go(target);
-    }
-}
-// DEBUG END
-
 function render() {
     switch (state.screen) {
         case 'home': return renderHome(); break;
@@ -949,9 +939,6 @@ function renderS2() {
             <div class="btn-row">
                 <button class="btn ghost" onclick="resetMortar()">重置</button>
                 <button class="btn" id="submit-mortar" onclick="submitMortar()" disabled>配比完成后解锁</button>
-                <!-- DEBUG: 调试跳过按钮，后期删除 -->
-                <button class="btn debug-skip" onclick="go('level')" style="background:#ff6b6b;color:white">调试跳过</button>
-                <!-- DEBUG END -->
             </div>
             <p class="muted" style="margin-top:10px" id="mortar-hint">目标：4 : 2 : 1</p>
         </div>
@@ -1112,9 +1099,6 @@ function renderS4() {
 
             <div class="btn-row">
                 <button class="btn" id="btn-next-s4" disabled onclick="finishPress()">进入下一步 →</button>
-                <!-- DEBUG: 调试跳过按钮，后期删除 -->
-                <button class="btn debug-skip" onclick="debugSkip('s5')" style="background:#ff6b6b;color:white">调试跳过</button>
-                <!-- DEBUG END -->
             </div>
         </div>
     `;
@@ -1264,9 +1248,6 @@ function renderS5() {
             <div class="btn-row">
                 <button class="btn ghost" onclick="go('s5')">↻ 重来</button>
                 <button class="btn" id="btn-next" disabled onclick="finishInlay()">完成 →</button>
-                <!-- DEBUG: 调试跳过按钮，后期删除 -->
-                <button class="btn debug-skip" onclick="debugSkip('s6')" style="background:#ff6b6b;color:white">调试跳过</button>
-                <!-- DEBUG END -->
             </div>
             <p class="muted" style="margin-top:8px" id="puzzle-hint">已镶嵌：0 / ${total} 片</p>
         </div>
@@ -1556,9 +1537,6 @@ function renderS6() {
             <div class="btn-row">
                 <button class="btn ghost" onclick="go('s6')">↻ 重新描摹</button>
                 <button class="btn" id="btn-trace-next" disabled onclick="finishTrace()">完成 →</button>
-                <!-- DEBUG: 调试跳过按钮，后期删除 -->
-                <button class="btn debug-skip" onclick="debugSkip('finish')" style="background:#ff6b6b;color:white">调试跳过</button>
-                <!-- DEBUG END -->
             </div>
         </div>
     `;
