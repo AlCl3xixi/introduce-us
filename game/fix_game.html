@@ -1566,6 +1566,51 @@ function renderS6() {
     setupTrace(lv);
 }
 
+function convexHull(points) {
+    if (points.length <= 1) return points;
+    
+    points.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    
+    const lower = [];
+    for (const p of points) {
+        while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) {
+            lower.pop();
+        }
+        lower.push(p);
+    }
+    
+    const upper = [];
+    for (let i = points.length - 1; i >= 0; i--) {
+        const p = points[i];
+        while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) {
+            upper.pop();
+        }
+        upper.push(p);
+    }
+    
+    upper.pop();
+    lower.pop();
+    return lower.concat(upper);
+}
+
+function isPointInPolygon(x, y, polygon) {
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i][0], yi = polygon[i][1];
+        const xj = polygon[j][0], yj = polygon[j][1];
+        
+        if (((yi > y) !== (yj > y)) &&
+            (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+            inside = !inside;
+        }
+    }
+    return inside;
+}
+
+function cross(o, a, b) {
+    return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+}
+
 function extractImageContour(img, mode = 'edge') {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -1591,90 +1636,544 @@ function extractImageContour(img, mode = 'edge') {
     const imageData = ctx.getImageData(0, 0, w, h);
     const data = imageData.data;
     
-    if (mode === 'white') {
-        const visited = new Uint8Array(w * h);
-        const contours = [];
+    if (mode === 'white' || mode === 'alpha' || mode === 'subject' || mode === 'hull' || mode === 'color' || mode === 'outline') {
+        const mask = new Uint8Array(w * h);
         
-        for (let y = 0; y < h; y++) {
-            for (let x = 0; x < w; x++) {
-                const idx = (y * w + x) * 4;
+        if (mode === 'subject') {
+            const margin = 20;
+            let sumR = 0, sumG = 0, sumB = 0, count = 0;
+            
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    if (x < margin || x > w - margin - 1 || y < margin || y > h - margin - 1) {
+                        const idx = (y * w + x) * 4;
+                        sumR += data[idx];
+                        sumG += data[idx + 1];
+                        sumB += data[idx + 2];
+                        count++;
+                    }
+                }
+            }
+            
+            const bgR = sumR / count;
+            const bgG = sumG / count;
+            const bgB = sumB / count;
+            
+            console.log('Subject detection: using color difference', 'bg:', Math.round(bgR), Math.round(bgG), Math.round(bgB));
+            
+            const diffThreshold = 30;
+            const allPoints = [];
+            
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    const idx = (y * w + x) * 4;
+                    const r = data[idx];
+                    const g = data[idx + 1];
+                    const b = data[idx + 2];
+                    const diff = Math.sqrt(
+                        Math.pow(r - bgR, 2) + 
+                        Math.pow(g - bgG, 2) + 
+                        Math.pow(b - bgB, 2)
+                    );
+                    if (diff > diffThreshold) {
+                        allPoints.push([x, y]);
+                    }
+                }
+            }
+            
+            console.log('Subject detection: found', allPoints.length, 'points');
+            
+            if (allPoints.length === 0) {
+                return generateFallbackContour(w, h);
+            }
+            
+            const hullPoints = convexHull(allPoints);
+            
+            console.log('Subject detection: hull points', hullPoints.length);
+            
+            if (hullPoints.length < 3) {
+                return generateFallbackContour(w, h);
+            }
+            
+            const cx = w / 2, cy = h / 2;
+            hullPoints.sort((a, b) => {
+                const angleA = Math.atan2(a[1] - cy, a[0] - cx);
+                const angleB = Math.atan2(b[1] - cy, b[0] - cx);
+                return angleA - angleB;
+            });
+            
+            const targetCount = 150;
+            const step = Math.max(1, Math.floor(hullPoints.length / targetCount));
+            const sampled = [];
+            
+            for (let i = 0; i < hullPoints.length; i += step) {
+                sampled.push(hullPoints[i]);
+            }
+            
+            if (sampled.length < 40) {
+                return generateFallbackContour(w, h);
+            }
+            
+            const smoothRadius = 3;
+            const smoothed = [];
+            for (let i = 0; i < sampled.length; i++) {
+                let sumX = 0, sumY = 0, count = 0;
+                for (let k = -smoothRadius; k <= smoothRadius; k++) {
+                    const idx = (i + k + sampled.length) % sampled.length;
+                    sumX += sampled[idx][0];
+                    sumY += sampled[idx][1];
+                    count++;
+                }
+                smoothed.push([sumX / count, sumY / count]);
+            }
+            
+            return smoothed;
+        } else if (mode === 'alpha') {
+            const alphaThreshold = 10;
+            let alphaCount = 0;
+            for (let i = 0; i < w * h; i++) {
+                const idx = i * 4;
+                const a = data[idx + 3];
+                mask[i] = a > alphaThreshold ? 1 : 0;
+                if (a > alphaThreshold) alphaCount++;
+            }
+            console.log('Alpha mode: non-transparent pixels:', alphaCount);
+            
+            const dilateRadius = 10;
+            console.log('Alpha mode: dilate radius', dilateRadius);
+            const newMask = new Uint8Array(w * h);
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    for (let dy = -dilateRadius; dy <= dilateRadius; dy++) {
+                        for (let dx = -dilateRadius; dx <= dilateRadius; dx++) {
+                            const nx = x + dx;
+                            const ny = y + dy;
+                            if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+                                if (mask[ny * w + nx] === 1) {
+                                    newMask[y * w + x] = 1;
+                                    break;
+                                }
+                            }
+                        }
+                        if (newMask[y * w + x] === 1) break;
+                    }
+                }
+            }
+            for (let i = 0; i < w * h; i++) mask[i] = newMask[i];
+            
+            const erodeRadius = 6;
+            console.log('Alpha mode: erode radius', erodeRadius);
+            const erodedMask = new Uint8Array(w * h);
+            for (let y = erodeRadius; y < h - erodeRadius; y++) {
+                for (let x = erodeRadius; x < w - erodeRadius; x++) {
+                    let allSet = true;
+                    for (let dy = -erodeRadius; dy <= erodeRadius && allSet; dy++) {
+                        for (let dx = -erodeRadius; dx <= erodeRadius && allSet; dx++) {
+                            if (mask[(y + dy) * w + (x + dx)] === 0) {
+                                allSet = false;
+                            }
+                        }
+                    }
+                    erodedMask[y * w + x] = allSet ? 1 : 0;
+                }
+            }
+            for (let i = 0; i < w * h; i++) mask[i] = erodedMask[i];
+            
+            let finalCount = 0;
+            for (let i = 0; i < w * h; i++) {
+                if (mask[i] === 1) finalCount++;
+            }
+            console.log('Alpha mode: after morph ops, mask pixels:', finalCount);
+            
+            const edgePoints = [];
+            for (let y = 1; y < h - 1; y++) {
+                for (let x = 1; x < w - 1; x++) {
+                    if (mask[y * w + x] === 1) {
+                        let hasZeroNeighbor = false;
+                        for (let dy = -1; dy <= 1 && !hasZeroNeighbor; dy++) {
+                            for (let dx = -1; dx <= 1 && !hasZeroNeighbor; dx++) {
+                                if (dx === 0 && dy === 0) continue;
+                                if (mask[(y + dy) * w + (x + dx)] === 0) {
+                                    hasZeroNeighbor = true;
+                                }
+                            }
+                        }
+                        if (hasZeroNeighbor) {
+                            edgePoints.push([x, y]);
+                        }
+                    }
+                }
+            }
+            console.log('Alpha mode: edge points found:', edgePoints.length);
+            
+            if (edgePoints.length === 0) {
+                for (let i = 0; i < w * h; i++) mask[i] = 1;
+                return;
+            }
+            
+            const cx = w / 2, cy = h / 2;
+            edgePoints.sort((a, b) => {
+                const angleA = Math.atan2(a[1] - cy, a[0] - cx);
+                const angleB = Math.atan2(b[1] - cy, b[0] - cx);
+                return angleA - angleB;
+            });
+            
+            const targetCount = 150;
+            const step = Math.max(1, Math.floor(edgePoints.length / targetCount));
+            const sampled = [];
+            
+            for (let i = 0; i < edgePoints.length; i += step) {
+                sampled.push(edgePoints[i]);
+            }
+            
+            console.log('Alpha mode: sampled points:', sampled.length);
+            
+            if (sampled.length < 40) {
+                return generateFallbackContour(w, h);
+            }
+            
+            const smoothRadius = 2;
+            const smoothed = [];
+            for (let i = 0; i < sampled.length; i++) {
+                let sumX = 0, sumY = 0, count = 0;
+                for (let k = -smoothRadius; k <= smoothRadius; k++) {
+                    const idx = (i + k + sampled.length) % sampled.length;
+                    sumX += sampled[idx][0];
+                    sumY += sampled[idx][1];
+                    count++;
+                }
+                smoothed.push([sumX / count, sumY / count]);
+            }
+            
+            return smoothed;
+        } else if (mode === 'hull') {
+            const alphaThreshold = 10;
+            const allPoints = [];
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    const idx = (y * w + x) * 4;
+                    const a = data[idx + 3];
+                    if (a > alphaThreshold) {
+                        allPoints.push([x, y]);
+                    }
+                }
+            }
+            
+            console.log('Hull mode: alpha points:', allPoints.length);
+            
+            if (allPoints.length === 0) {
+                return generateFallbackContour(w, h);
+            }
+            
+            const step = Math.max(1, Math.floor(allPoints.length / 5000));
+            const sampledForHull = [];
+            for (let i = 0; i < allPoints.length; i += step) {
+                sampledForHull.push(allPoints[i]);
+            }
+            console.log('Hull mode: sampled for hull:', sampledForHull.length);
+            
+            const hullPoints = convexHull(sampledForHull);
+            
+            console.log('Hull mode: hull points:', hullPoints.length);
+            
+            if (hullPoints.length < 3) {
+                return generateFallbackContour(w, h);
+            }
+            
+            const cx = w / 2, cy = h / 2;
+            hullPoints.sort((a, b) => {
+                const angleA = Math.atan2(a[1] - cy, a[0] - cx);
+                const angleB = Math.atan2(b[1] - cy, b[0] - cx);
+                return angleA - angleB;
+            });
+            
+            const targetCount = 150;
+            const sampleStep = Math.max(1, Math.floor(hullPoints.length / targetCount));
+            const sampled = [];
+            
+            for (let i = 0; i < hullPoints.length; i += sampleStep) {
+                sampled.push(hullPoints[i]);
+            }
+            
+            console.log('Hull mode: final sampled points:', sampled.length);
+            
+            if (sampled.length < 40) {
+                return generateFallbackContour(w, h);
+            }
+            
+            const smoothRadius = 3;
+            const smoothed = [];
+            for (let i = 0; i < sampled.length; i++) {
+                let sumX = 0, sumY = 0, count = 0;
+                for (let k = -smoothRadius; k <= smoothRadius; k++) {
+                    const idx = (i + k + sampled.length) % sampled.length;
+                    sumX += sampled[idx][0];
+                    sumY += sampled[idx][1];
+                    count++;
+                }
+                smoothed.push([sumX / count, sumY / count]);
+            }
+            
+            return smoothed;
+        } else if (mode === 'color') {
+            const margin = 10;
+            let sumR = 0, sumG = 0, sumB = 0, count = 0;
+            
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    if (x < margin || x > w - margin - 1 || y < margin || y > h - margin - 1) {
+                        const idx = (y * w + x) * 4;
+                        sumR += data[idx];
+                        sumG += data[idx + 1];
+                        sumB += data[idx + 2];
+                        count++;
+                    }
+                }
+            }
+            
+            const bgR = sumR / count;
+            const bgG = sumG / count;
+            const bgB = sumB / count;
+            
+            const diffThreshold = 20;
+            
+            for (let i = 0; i < w * h; i++) {
+                const idx = i * 4;
                 const r = data[idx];
                 const g = data[idx + 1];
                 const b = data[idx + 2];
-                const brightness = (r + g + b) / 3;
-                
-                if (brightness > 200 && visited[y * w + x] === 0) {
-                    const contour = [];
-                    let cx = x, cy = y;
-                    
-                    while (true) {
-                        if (cx < 0 || cx >= w || cy < 0 || cy >= h) break;
-                        const pixelIdx = (cy * w + cx) * 4;
-                        const pxR = data[pixelIdx];
-                        const pxG = data[pixelIdx + 1];
-                        const pxB = data[pixelIdx + 2];
-                        const pxBright = (pxR + pxG + pxB) / 3;
+                const diff = Math.sqrt(
+                    Math.pow(r - bgR, 2) + 
+                    Math.pow(g - bgG, 2) + 
+                    Math.pow(b - bgB, 2)
+                );
+                mask[i] = diff > diffThreshold ? 1 : 0;
+            }
+            
+            const visited = new Uint8Array(w * h);
+            const regions = [];
+            
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    if (mask[y * w + x] === 1 && visited[y * w + x] === 0) {
+                        const region = [];
+                        const queue = [[x, y]];
+                        visited[y * w + x] = 1;
                         
-                        if (pxBright <= 200 || visited[cy * w + cx] === 1) break;
-                        
-                        visited[cy * w + cx] = 1;
-                        contour.push([cx, cy]);
-                        
-                        let found = false;
-                        for (let dy = -1; dy <= 1 && !found; dy++) {
-                            for (let dx = -1; dx <= 1 && !found; dx++) {
-                                if (dx === 0 && dy === 0) continue;
-                                const nx = cx + dx;
-                                const ny = cy + dy;
-                                if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
-                                    const nIdx = (ny * w + nx) * 4;
-                                    const nr = data[nIdx];
-                                    const ng = data[nIdx + 1];
-                                    const nb = data[nIdx + 2];
-                                    const nBright = (nr + ng + nb) / 3;
-                                    if (nBright > 200 && visited[ny * w + nx] === 0) {
-                                        cx = nx;
-                                        cy = ny;
-                                        found = true;
+                        while (queue.length > 0) {
+                            const [cx, cy] = queue.shift();
+                            region.push([cx, cy]);
+                            
+                            for (let dy = -1; dy <= 1; dy++) {
+                                for (let dx = -1; dx <= 1; dx++) {
+                                    if (dx === 0 && dy === 0) continue;
+                                    const nx = cx + dx;
+                                    const ny = cy + dy;
+                                    if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+                                        if (mask[ny * w + nx] === 1 && visited[ny * w + nx] === 0) {
+                                            visited[ny * w + nx] = 1;
+                                            queue.push([nx, ny]);
+                                        }
                                     }
                                 }
                             }
                         }
-                        if (!found) break;
+                        regions.push(region);
                     }
-                    
-                    if (contour.length >= 20) {
-                        contours.push(contour);
+                }
+            }
+            
+            regions.sort((a, b) => b.length - a.length);
+            
+            const minRegionSize = 30;
+            for (let i = 0; i < w * h; i++) mask[i] = 0;
+            for (const region of regions) {
+                if (region.length >= minRegionSize) {
+                    for (const [x, y] of region) {
+                        mask[y * w + x] = 1;
+                    }
+                }
+            }
+            
+            const dilateRadius = 4;
+            const newMask = new Uint8Array(w * h);
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    for (let dy = -dilateRadius; dy <= dilateRadius; dy++) {
+                        for (let dx = -dilateRadius; dx <= dilateRadius; dx++) {
+                            const nx = x + dx;
+                            const ny = y + dy;
+                            if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+                                if (mask[ny * w + nx] === 1) {
+                                    newMask[y * w + x] = 1;
+                                    break;
+                                }
+                            }
+                        }
+                        if (newMask[y * w + x] === 1) break;
+                    }
+                }
+            }
+            for (let i = 0; i < w * h; i++) mask[i] = newMask[i];
+        } else if (mode === 'outline') {
+            const alphaThreshold = 10;
+            for (let i = 0; i < w * h; i++) {
+                const idx = i * 4;
+                const a = data[idx + 3];
+                mask[i] = a > alphaThreshold ? 1 : 0;
+            }
+            
+            const smallDilate = 3;
+            const dilated = new Uint8Array(w * h);
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    for (let dy = -smallDilate; dy <= smallDilate; dy++) {
+                        for (let dx = -smallDilate; dx <= smallDilate; dx++) {
+                            const nx = x + dx;
+                            const ny = y + dy;
+                            if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+                                if (mask[ny * w + nx] === 1) {
+                                    dilated[y * w + x] = 1;
+                                    break;
+                                }
+                            }
+                        }
+                        if (dilated[y * w + x] === 1) break;
+                    }
+                }
+            }
+            for (let i = 0; i < w * h; i++) mask[i] = dilated[i];
+            
+            const edgePoints = [];
+            for (let y = 1; y < h - 1; y++) {
+                for (let x = 1; x < w - 1; x++) {
+                    if (mask[y * w + x] === 1) {
+                        let hasZero = false;
+                        for (let dy = -1; dy <= 1 && !hasZero; dy++) {
+                            for (let dx = -1; dx <= 1 && !hasZero; dx++) {
+                                if (dx === 0 && dy === 0) continue;
+                                if (mask[(y + dy) * w + (x + dx)] === 0) {
+                                    hasZero = true;
+                                }
+                            }
+                        }
+                        if (hasZero) {
+                            edgePoints.push([x, y]);
+                        }
+                    }
+                }
+            }
+            
+            if (edgePoints.length === 0) {
+                return generateFallbackContour(w, h);
+            }
+            
+            const cx = w / 2, cy = h / 2;
+            edgePoints.sort((a, b) => {
+                const angleA = Math.atan2(a[1] - cy, a[0] - cx);
+                const angleB = Math.atan2(b[1] - cy, b[0] - cx);
+                return angleA - angleB;
+            });
+            
+            const targetCount = 180;
+            const step = Math.max(1, Math.floor(edgePoints.length / targetCount));
+            const sampled = [];
+            
+            for (let i = 0; i < edgePoints.length; i += step) {
+                sampled.push(edgePoints[i]);
+            }
+            
+            if (sampled.length < 40) {
+                return generateFallbackContour(w, h);
+            }
+            
+            const smoothRadius = 2;
+            const smoothed = [];
+            for (let i = 0; i < sampled.length; i++) {
+                let sumX = 0, sumY = 0, count = 0;
+                for (let k = -smoothRadius; k <= smoothRadius; k++) {
+                    const idx = (i + k + sampled.length) % sampled.length;
+                    sumX += sampled[idx][0];
+                    sumY += sampled[idx][1];
+                    count++;
+                }
+                smoothed.push([sumX / count, sumY / count]);
+            }
+            
+            return smoothed;
+        } else {
+            for (let i = 0; i < w * h; i++) {
+                const idx = i * 4;
+                const r = data[idx];
+                const g = data[idx + 1];
+                const b = data[idx + 2];
+                const a = data[idx + 3];
+                const brightness = (r + g + b) / 3;
+                if (a > 128 || brightness < 240) {
+                    mask[i] = 1;
+                } else {
+                    mask[i] = 0;
+                }
+            }
+        }
+        
+        const boundaryPoints = [];
+        
+        for (let y = 1; y < h - 1; y++) {
+            for (let x = 1; x < w - 1; x++) {
+                if (mask[y * w + x] === 1) {
+                    let hasEmptyNeighbor = false;
+                    for (let dy = -1; dy <= 1 && !hasEmptyNeighbor; dy++) {
+                        for (let dx = -1; dx <= 1 && !hasEmptyNeighbor; dx++) {
+                            if (dx === 0 && dy === 0) continue;
+                            if (mask[(y + dy) * w + (x + dx)] === 0) {
+                                hasEmptyNeighbor = true;
+                            }
+                        }
+                    }
+                    if (hasEmptyNeighbor) {
+                        boundaryPoints.push([x, y]);
                     }
                 }
             }
         }
         
-        if (contours.length === 0) {
-            return generateFallbackContour(w, h);
-        }
-        
-        let largestContour = contours[0];
-        for (let i = 1; i < contours.length; i++) {
-            if (contours[i].length > largestContour.length) {
-                largestContour = contours[i];
+        if (boundaryPoints.length === 0) {
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    if (mask[y * w + x] === 1) {
+                        boundaryPoints.push([x, y]);
+                    }
+                }
             }
         }
         
+        if (boundaryPoints.length === 0) {
+            return generateFallbackContour(w, h);
+        }
+        
+        const cx = w / 2, cy = h / 2;
+        
+        boundaryPoints.sort((a, b) => {
+            const angleA = Math.atan2(a[1] - cy, a[0] - cx);
+            const angleB = Math.atan2(b[1] - cy, b[0] - cx);
+            return angleA - angleB;
+        });
+        
         const targetCount = 150;
-        const step = Math.max(1, Math.floor(largestContour.length / targetCount));
+        const step = Math.max(1, Math.floor(boundaryPoints.length / targetCount));
         const sampled = [];
         
-        for (let i = 0; i < largestContour.length; i += step) {
-            sampled.push(largestContour[i]);
+        for (let i = 0; i < boundaryPoints.length; i += step) {
+            sampled.push(boundaryPoints[i]);
         }
         
         if (sampled.length < 40) {
             return generateFallbackContour(w, h);
         }
         
-        const smoothed = [];
         const smoothRadius = 3;
+        const smoothed = [];
         for (let i = 0; i < sampled.length; i++) {
             let sumX = 0, sumY = 0, count = 0;
             for (let k = -smoothRadius; k <= smoothRadius; k++) {
@@ -1884,20 +2383,51 @@ function setupTrace(lv) {
         return pts;
     }
 
+    const FENGHUANG_CONTOUR_POINTS = [
+        [269,12],[277,14],[278,24],[286,27],[284,37],[286,46],[291,52],[298,56],[299,66],[297,76],[288,82],[282,79],[276,89],[272,99],[265,108],[272,113],[272,123],[272,133],[273,143],[281,145],[291,146],[300,147],[305,154],[299,159],[301,166],[298,176],[303,178],[309,171],[304,168],[308,161],[313,167],[317,161],[324,155],[334,156],[343,151],[353,150],[363,154],[365,163],[357,167],[354,177],[360,174],[363,167],[368,173],[363,180],[362,190],[361,200],[354,207],[352,217],[357,222],[361,229],[353,231],[350,225],[347,234],[337,239],[343,243],[340,251],[334,246],[329,241],[324,245],[333,253],[329,260],[319,262],[310,255],[302,257],[302,267],[304,276],[310,286],[318,291],[326,296],[336,298],[337,305],[329,308],[319,311],[309,311],[299,309],[290,302],[284,305],[291,315],[301,314],[311,315],[319,320],[329,321],[338,324],[335,333],[326,342],[316,351],[306,356],[296,357],[289,360],[290,370],[282,374],[277,380],[267,378],[257,379],[247,381],[237,380],[227,378],[219,379],[214,389],[204,395],[194,392],[186,383],[183,379],[173,386],[163,387],[153,387],[143,384],[133,381],[123,375],[116,366],[115,356],[112,346],[110,336],[109,326],[119,326],[121,336],[130,341],[138,338],[148,335],[158,337],[160,328],[161,318],[159,311],[151,309],[144,314],[147,324],[144,333],[134,332],[128,322],[126,312],[126,302],[119,299],[110,297],[113,288],[103,285],[95,278],[90,271],[94,263],[96,254],[98,244],[105,234],[115,231],[122,226],[123,216],[117,211],[107,213],[99,217],[91,222],[81,222],[79,213],[74,204],[73,194],[63,193],[53,195],[51,187],[43,184],[36,182],[29,177],[30,167],[33,159],[31,150],[40,144],[50,144],[55,140],[62,133],[57,127],[52,120],[43,113],[42,103],[49,96],[59,89],[69,89],[68,79],[68,69],[74,63],[78,53],[87,47],[93,42],[101,33],[104,25],[112,20],[120,26],[124,34],[131,30],[135,23],[144,22],[154,24],[160,31],[168,35],[169,44],[172,52],[166,60],[166,70],[176,71],[179,79],[184,85],[179,92],[175,99],[180,104],[184,104],[187,94],[186,84],[187,74],[195,65],[205,58],[215,50],[225,44],[235,40],[245,32],[255,29],[263,19]
+    ];
+    const MUDAN_CONTOUR_POINTS = [
+        [135,19],[146,21],[156,28],[166,34],[175,36],[185,37],[187,49],[197,52],[209,52],[221,52],[232,56],[241,49],[252,49],[262,47],[274,41],[285,42],[297,43],[309,46],[306,57],[305,69],[310,75],[319,84],[316,95],[307,107],[317,113],[329,112],[341,115],[348,124],[346,136],[343,148],[350,148],[362,147],[373,151],[385,156],[386,166],[398,171],[399,183],[399,195],[393,206],[384,214],[372,218],[369,225],[362,231],[358,237],[358,249],[366,254],[376,266],[372,277],[375,288],[373,300],[370,312],[366,321],[354,317],[342,314],[330,310],[321,320],[310,314],[304,302],[303,312],[307,323],[306,334],[310,346],[303,354],[299,365],[293,377],[285,383],[273,377],[261,372],[253,362],[246,369],[234,369],[226,359],[217,349],[216,337],[215,326],[209,329],[202,341],[194,352],[185,361],[173,367],[161,361],[156,349],[151,350],[152,362],[145,370],[138,382],[129,387],[119,380],[112,372],[105,365],[105,353],[110,341],[101,342],[91,352],[80,360],[69,366],[66,355],[70,343],[78,331],[89,323],[93,311],[83,303],[80,313],[78,324],[69,334],[58,332],[47,331],[35,332],[23,328],[24,317],[29,305],[38,294],[49,288],[61,288],[55,279],[44,270],[48,259],[41,251],[29,251],[24,243],[25,231],[28,219],[22,215],[10,211],[9,199],[0,191],[0,179],[1,167],[8,158],[10,147],[2,138],[7,127],[19,120],[28,114],[30,103],[27,92],[30,83],[38,78],[39,66],[43,55],[55,50],[67,47],[79,49],[91,55],[98,63],[101,74],[104,82],[111,78],[108,66],[111,57],[120,51],[121,39],[130,30]
+    ];
+    const LONG_CONTOUR_POINTS = [
+        [129,84],[138,86],[147,90],[156,90],[157,98],[158,107],[166,115],[175,118],[182,122],[191,128],[192,136],[198,142],[194,150],[197,158],[205,164],[213,162],[221,163],[230,162],[239,162],[248,158],[257,157],[266,158],[275,161],[284,163],[292,170],[299,177],[305,185],[309,194],[315,194],[314,185],[314,176],[315,167],[316,158],[317,149],[322,140],[329,133],[335,124],[344,122],[353,120],[361,114],[370,110],[379,108],[388,109],[397,112],[399,119],[399,128],[399,137],[399,146],[399,155],[398,164],[390,170],[388,179],[387,188],[379,190],[370,197],[361,204],[359,213],[364,222],[373,227],[378,233],[376,242],[379,251],[378,260],[378,269],[379,278],[380,287],[377,293],[368,296],[359,295],[350,299],[341,306],[333,304],[327,296],[324,288],[324,279],[324,270],[315,272],[306,276],[299,284],[292,292],[284,295],[275,294],[266,291],[257,288],[253,281],[248,272],[244,263],[249,256],[258,249],[261,240],[254,232],[245,230],[237,236],[229,243],[221,251],[214,259],[205,262],[204,270],[196,277],[190,285],[182,289],[176,297],[172,306],[164,311],[156,309],[149,313],[140,313],[131,311],[122,311],[113,310],[104,308],[104,299],[102,291],[101,282],[97,274],[89,269],[81,268],[74,272],[65,273],[57,275],[50,279],[43,286],[35,285],[28,279],[26,271],[25,262],[16,260],[13,251],[13,242],[17,234],[22,226],[27,217],[28,211],[28,202],[29,193],[28,184],[23,175],[15,170],[11,161],[8,152],[7,143],[6,134],[11,128],[20,121],[28,113],[37,106],[46,100],[55,97],[64,97],[73,100],[82,97],[90,91],[99,92],[108,90],[117,92],[126,87]
+    ];
+    
     function loadContourFromImage() {
         const img = new Image();
-        img.crossOrigin = 'anonymous';
         
         let contourMode = 'edge';
         let imgPath = `images/puzzle/${lv.imgPrefix}-preview.jpg`;
         
         if (lv.imgPrefix === 'fenghuang') {
-            imgPath = `images/puzzle/fenghuang-delineate.jpg`;
-            contourMode = 'white';
+            imgPath = `images/puzzle/fenghuang-delineate.png?v=${Date.now()}`;
+            contourMode = 'alpha';
+        } else if (lv.imgPrefix === 'mudan') {
+            imgPath = `images/puzzle/mudan-delineate.png?v=${Date.now()}`;
+            contourMode = 'alpha';
+        } else if (lv.imgPrefix === 'long') {
+            imgPath = `images/puzzle/long-delineate.png?v=${Date.now()}`;
+            contourMode = 'alpha';
         }
         
         img.onload = () => {
-            const contourPoints = extractImageContour(img, contourMode);
+            console.log('Contour image loaded:', img.width, 'x', img.height, 'mode:', contourMode);
+            
+            let contourPoints;
+            if (lv.imgPrefix === 'fenghuang') {
+                contourPoints = FENGHUANG_CONTOUR_POINTS;
+                console.log('使用预提取凤凰轮廓点:', contourPoints.length);
+            } else if (lv.imgPrefix === 'mudan') {
+                contourPoints = MUDAN_CONTOUR_POINTS;
+                console.log('使用预提取牡丹轮廓点:', contourPoints.length);
+            } else if (lv.imgPrefix === 'long') {
+                contourPoints = LONG_CONTOUR_POINTS;
+                console.log('使用预提取龙轮廓点:', contourPoints.length);
+            } else {
+                contourPoints = extractImageContour(img, contourMode);
+                console.log('Contour points extracted:', contourPoints.length);
+            }
+            
             const mappedPoints = mapContourToCanvas(contourPoints, img.width, img.height);
             initTrace(mappedPoints);
         };
@@ -1929,7 +2459,7 @@ function setupTrace(lv) {
     svg.setAttribute('height', canvas.height);
     svg.setAttribute('viewBox', `0 0 ${canvas.width} ${canvas.height}`);
     const pathD = 'M ' + pts.map(p => p.map(v => v.toFixed(1)).join(' ')).join(' L ');
-    svg.innerHTML = `<path d="${pathD}" fill="none" stroke="#c89c6c" stroke-width="3" stroke-dasharray="6 8"/>`;
+    svg.innerHTML = `<path d="${pathD}" fill="none" stroke="#ffffff" stroke-width="4" stroke-dasharray="6 8" stroke-opacity="0.9"/>`;
 
     // canvas 画笔
     const ctx = canvas.getContext('2d');
@@ -1941,7 +2471,7 @@ function setupTrace(lv) {
     let drawing = false;
     let tracedPath = [];
     // 容差像素：画布短边的 8%
-    const tolerance = Math.min(canvas.width, canvas.height) * 0.08;
+    const tolerance = Math.min(canvas.width, canvas.height) * 0.15;
     // 已被轨迹覆盖的路径点（索引集合）
     let coveredIdx = new Set();
 
@@ -2010,7 +2540,7 @@ function setupTrace(lv) {
         const score = Math.round((coverage * 0.6 + accuracy * 0.4) * 100);
 
         accEl.textContent = `贴合度：${score}%（覆盖 ${Math.round(coverage * 100)}% · 精度 ${Math.round(accuracy * 100)}%）`;
-        if (score >= 75) {
+        if (score >= 60) {
             nextBtn.disabled = false;
             toast('✓ 修整完成！');
         } else {
