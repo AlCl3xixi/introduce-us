@@ -245,3 +245,39 @@ function preloadGameImages() {
         }, 1500);
     }
 }
+
+// ------------------------------------------------------------
+// 7. 滚动渐显动效（IntersectionObserver · 兼顾无障碍）
+//    仅对内容区块添加 .reveal，进入视口后加 .is-visible；
+//    prefers-reduced-motion 或不支持 IO 时直接显示，不加动效。
+//    注意：此监听器注册在 renderTeam/renderGallery 之后，
+//    故 DOMContentLoaded 触发时能拿到动态生成的卡片网格容器。
+// ------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', () => {
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // 仅选取“自身无 hover transform”的容器/区块，避免与上浮动效冲突
+    const targets = document.querySelectorAll(
+        '.section-title, .section-hint, .project-header, .project-section, ' +
+        '.culture-intro, .culture-block, .team-grid, .gallery-grid, ' +
+        '.significance-grid, .game-entry, .tab-bar, .gen-form'
+    );
+
+    // 无障碍或浏览器不支持：直接显示，不加动效
+    if (prefersReduced || !('IntersectionObserver' in window)) {
+        return;
+    }
+
+    targets.forEach((el) => el.classList.add('reveal'));
+
+    const io = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
+                io.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+
+    targets.forEach((el) => io.observe(el));
+});
