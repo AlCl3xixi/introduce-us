@@ -1112,6 +1112,7 @@ img { max-width: 100%; display: block; }
 .status-running { color: var(--primary); }
 .status-success { color: var(--success); }
 .status-error   { color: var(--error); white-space: pre-line; }
+.status-info    { color: var(--text-muted); white-space: pre-line; }
 
 /* 结果区 */
 .result-area {

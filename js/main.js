@@ -69,12 +69,19 @@ function renderTeam() {
 //    方案 A（推荐）：在 galleryImages 数组里填入 50 张图片路径。
 //    方案 B：按命名约定自动生成（下方已提供示例，文件名从 1.jpg 到 50.jpg）。
 // ------------------------------------------------------------
-const galleryImages = [
-    'https://shuyun-ci-img.oss-cn-shenzhen.aliyuncs.com/fzd.jpg',
-    // 'images/gallery/2.jpg',
-    // 'images/gallery/3.jpg',
-    // ... 后续添加更多图片
-];
+const galleryImages = Array.from({ length: 31 }, (_, i) =>
+    `https://shuyun-ci-img.oss-cn-shenzhen.aliyuncs.com/photos/sycg%28${i + 1}%29.jpg`
+);
+
+// 阿里云 OSS 图片处理：服务端按需生成缩略图并转 WebP，大幅减小传输体积
+// 缩略图：画廊展示用，400x400 填充（匹配 1:1 画框，object-fit cover）
+function thumbUrl(src) {
+    return src + '?x-oss-process=image/resize,m_fill,w_400,h_400,limit_0/format,webp';
+}
+// 大图：Lightbox 放大查看用，最长边 1200
+function largeUrl(src) {
+    return src + '?x-oss-process=image/resize,w_1200,limit_0/format,webp';
+}
 
 // 如果 galleryImages 为空，则自动生成 50 个占位项（便于调试样式）
 function buildGalleryList() {
@@ -97,8 +104,12 @@ function renderGallery() {
         const item = document.createElement('div');
         item.className = 'gallery-item';
         const img = document.createElement('img');
-        img.src = src;
+        // 用缩略图 URL 减小首屏加载量；decoding=async 避免阻塞主线程
+        img.src = thumbUrl(src);
         img.loading = 'lazy';
+        img.decoding = 'async';
+        img.width = 400;
+        img.height = 400;
         img.alt = '活动图片 ' + (idx + 1);
         img.title = '活动图片 ' + (idx + 1);
         img.addEventListener('load', () => img.classList.add('loaded'));
@@ -123,7 +134,7 @@ function openLightbox(src, altText) {
             if (e.target === lightbox) closeLightbox();
         });
     }
-    lightboxImg.src = src;
+    lightboxImg.src = largeUrl(src);
     lightboxImg.alt = altText || '活动图片';
     lightbox.classList.add('active');
     document.body.style.overflow = 'hidden';

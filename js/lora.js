@@ -10,6 +10,24 @@ const REQUEST_TIMEOUT_MS = 300 * 1000;  // 5 分钟，避免大模型超时
 const MAX_IMAGE_SIDE = 512;              // 上传图压缩到最长边 512，减小 payload，也避免 WebUI 再做 resize 出问题
 const IMAGE_JPEG_QUALITY = 0.8;
 
+// LoRA 默认前缀：每次生图自动附加
+const LORA_DEFAULT_PREFIX = '<lora:toqc8.10.1:1>,plate';
+
+/**
+ * 处理用户原始输入：词典翻译 + LoRA 前缀
+ * @param {string} raw 用户输入的原始提示词（支持中文）
+ * @returns {string} 最终发送给 SD 的英文 prompt
+ */
+function processPrompt(raw) {
+  const translated = (window.LORA_TRANSLATE ? window.LORA_TRANSLATE(raw) : raw);
+  // 如果用户输入里没有 LoRA 前缀，自动追加
+  const promptLower = translated.toLowerCase();
+  if (!promptLower.includes('<lora:')) {
+    return `${LORA_DEFAULT_PREFIX}, ${translated}`;
+  }
+  return translated;
+}
+
 // ---------- 工具函数：文件 -> 压缩后 -> base64（不带前缀） ----------
 function fileToCompressedBase64(file) {
     return new Promise((resolve, reject) => {
@@ -114,7 +132,7 @@ function buildTxt2ImgPayload() {
     const hrSteps = parseInt(document.getElementById('p-hr-steps').value, 10) || 0;
 
     return {
-        prompt: document.getElementById('p-prompt').value.trim(),
+        prompt: processPrompt(document.getElementById('p-prompt').value.trim()),
         negative_prompt: document.getElementById('p-negative').value.trim(),
         styles: [],
         seed: parseInt(document.getElementById('p-seed').value, 10) || -1,
@@ -173,7 +191,7 @@ function buildImg2ImgPayload() {
     const images = img2imgState.init ? [img2imgState.init] : [];
 
     return {
-        prompt: document.getElementById('i-prompt').value.trim(),
+        prompt: processPrompt(document.getElementById('i-prompt').value.trim()),
         negative_prompt: document.getElementById('i-negative').value.trim(),
         seed: parseInt(document.getElementById('i-seed').value, 10) || -1,
         sampler_name: document.getElementById('i-sampler').value.trim() || 'Euler a',
@@ -320,9 +338,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const statusEl = document.getElementById('p-status');
             const resultEl = document.getElementById('gen-result');
             if (!prompt) {
-                setStatus(statusEl, '请先填写正向提示词 (Prompt)', 'error');
+                setStatus(statusEl, '请先填写正向提示词（支持中文输入，自动追加英文标签）', 'error');
                 return;
             }
+            const finalPrompt = processPrompt(prompt);
+            setStatus(statusEl, `📝 最终提示词: ${finalPrompt}`, 'info');
             callSdApi(SD_TXT2IMG, buildTxt2ImgPayload(), statusEl, resultEl, txtBtn);
         });
     }
@@ -335,13 +355,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const statusEl = document.getElementById('i-status');
             const resultEl = document.getElementById('gen-result');
             if (!prompt) {
-                setStatus(statusEl, '请先填写正向提示词 (Prompt)', 'error');
+                setStatus(statusEl, '请先填写正向提示词（支持中文输入，自动追加英文标签）', 'error');
                 return;
             }
             if (!img2imgState.init) {
                 setStatus(statusEl, '请先上传一张底图', 'error');
                 return;
             }
+            const finalPrompt = processPrompt(prompt);
+            setStatus(statusEl, `📝 最终提示词: ${finalPrompt}`, 'info');
             callSdApi(SD_IMG2IMG, buildImg2ImgPayload(), statusEl, resultEl, imgBtn);
         });
     }

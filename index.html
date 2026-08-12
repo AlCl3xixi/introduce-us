@@ -208,7 +208,7 @@
                         <div class="field-grid">
                             <div class="field field-span-2">
                                 <label for="p-prompt">正向提示词 (Prompt)</label>
-                                <textarea id="p-prompt" rows="3" placeholder="例: a photo of &lt;lora:xxx&gt;, masterpiece, best quality, highly detailed"></textarea>
+                                <textarea id="p-prompt" rows="3" placeholder="支持中文输入，自动追加英文标签。例: 一个漂亮的女孩"></textarea>
                             </div>
                             <div class="field field-span-2">
                                 <label for="p-negative">负向提示词 (Negative)</label>
@@ -306,7 +306,7 @@
                         <div class="field-grid">
                             <div class="field field-span-2">
                                 <label for="i-prompt">正向提示词 (Prompt)</label>
-                                <textarea id="i-prompt" rows="3" placeholder="例: a photo of &lt;lora:xxx&gt;, masterpiece, best quality"></textarea>
+                                <textarea id="i-prompt" rows="3" placeholder="支持中文输入，自动追加英文标签。例: 女孩 牡丹纹 长裙"></textarea>
                             </div>
                             <div class="field field-span-2">
                                 <label for="i-negative">负向提示词 (Negative)</label>
@@ -399,6 +399,7 @@
     </div>
 
     <script src="js/main.js"></script>
+    <script src="js/lora-dict.js"></script>
     <script src="js/lora.js"></script>
 </body>
 </html>
