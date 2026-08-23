@@ -691,6 +691,37 @@
         50% { background: rgba(200, 156, 108, 0.35); }
     }
 
+    /* ========== 音效开关按钮 ========== */
+    .sound-toggle {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(255, 250, 239, 0.9);
+        border: 1px solid rgba(200, 156, 108, 0.6);
+        color: #7a4f2d;
+        font-size: 18px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999;
+        box-shadow: 0 2px 8px rgba(122, 79, 45, 0.15);
+        transition: transform 0.15s ease, background 0.2s;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+    }
+    .sound-toggle:hover {
+        transform: scale(1.06);
+        background: rgba(255, 250, 239, 1);
+    }
+    .sound-toggle.muted {
+        color: #adb5bd;
+        background: rgba(248, 249, 250, 0.9);
+    }
+
     /* ========== footer ========== */
     .footer-text { text-align: center; color: #868e96; font-size: 12px; margin-top: 20px; letter-spacing: 1px; }
 
@@ -718,7 +749,218 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- 音效开关按钮（全局悬浮） -->
+<button class="sound-toggle" id="soundToggle" title="音乐 & 音效：开启">🔊</button>
+
 <script>
+/* =========================================================
+ * 音效管理模块（Web Audio API 合成，无需音频文件）
+ * =======================================================*/
+const SfxManager = (function () {
+    let audioCtx = null;
+    let enabled = true;  // 默认开启
+    let unlocked = false; // 浏览器自动播放策略：需用户首次交互解锁
+
+    // ---------- 初始化 AudioContext（在用户首次交互时调用）----------
+    function ensureContext() {
+        if (!audioCtx) {
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            } catch (e) {
+                console.warn('Web Audio API 不支持:', e);
+                return null;
+            }
+        }
+        // iOS/Safari 需要从 suspended 恢复
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(() => {});
+        }
+        unlocked = true;
+        return audioCtx;
+    }
+
+    // ---------- 通用：播放一段简单音调 ----------
+    function playTone({ freq = 440, duration = 0.15, type = 'sine', volume = 0.3, slideTo = null, delay = 0 }) {
+        if (!enabled) return;
+        const ctx = ensureContext();
+        if (!ctx) return;
+
+        const t0 = ctx.currentTime + delay;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, t0);
+        if (slideTo !== null) {
+            osc.frequency.exponentialRampToValueAtTime(Math.max(1, slideTo), t0 + duration);
+        }
+
+        // 包络：快速起音，平滑衰减，避免爆音
+        gain.gain.setValueAtTime(0, t0);
+        gain.gain.linearRampToValueAtTime(volume, t0 + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t0);
+        osc.stop(t0 + duration + 0.02);
+    }
+
+    // ---------- 通用：播放一段噪声（用于碎裂、敲击等）----------
+    function playNoise({ duration = 0.2, volume = 0.25, filterFreq = 2000, delay = 0 }) {
+        if (!enabled) return;
+        const ctx = ensureContext();
+        if (!ctx) return;
+
+        const t0 = ctx.currentTime + delay;
+        const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * duration));
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize); // 自然衰减
+        }
+
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = filterFreq;
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(volume, t0);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+
+        src.connect(filter).connect(gain).connect(ctx.destination);
+        src.start(t0);
+    }
+
+    // ---------- 各种预设音效 ----------
+    const effects = {
+        // 按钮点击：短促清脆的"嘀"声
+        click() {
+            playTone({ freq: 880, duration: 0.08, type: 'square', volume: 0.15 });
+        },
+
+        // 加材料（投料）：中低音短"咚"
+        add() {
+            playTone({ freq: 320, duration: 0.12, type: 'sine', volume: 0.25, slideTo: 220 });
+        },
+
+        // 小成功/步骤完成：上升的三音阶
+        success() {
+            playTone({ freq: 523, duration: 0.1, type: 'triangle', volume: 0.2, delay: 0 });      // C5
+            playTone({ freq: 659, duration: 0.1, type: 'triangle', volume: 0.2, delay: 0.08 });   // E5
+            playTone({ freq: 784, duration: 0.18, type: 'triangle', volume: 0.22, delay: 0.16 }); // G5
+        },
+
+        // 拖拽放置正确：清脆的"叮"
+        place() {
+            playTone({ freq: 1200, duration: 0.1, type: 'sine', volume: 0.2 });
+            playTone({ freq: 1800, duration: 0.12, type: 'sine', volume: 0.15, delay: 0.03 });
+        },
+
+        // 放置错误/失败：下降的"嘟"
+        error() {
+            playTone({ freq: 280, duration: 0.18, type: 'sawtooth', volume: 0.18, slideTo: 140 });
+        },
+
+        // 剪碎瓷片：噪声+高频碎裂感
+        break() {
+            playNoise({ duration: 0.18, volume: 0.22, filterFreq: 4000 });
+            playTone({ freq: 1600, duration: 0.08, type: 'square', volume: 0.12, slideTo: 400, delay: 0.02 });
+        },
+
+        // 力度失败（不足/过大）：低沉"噗"
+        fail() {
+            playTone({ freq: 180, duration: 0.15, type: 'square', volume: 0.15, slideTo: 90 });
+        },
+
+        // 描摹下笔：极短的"沙"声
+        draw_start() {
+            playNoise({ duration: 0.06, volume: 0.12, filterFreq: 1200 });
+        },
+
+        // 描摹成功：轻柔的上行音阶
+        draw_ok() {
+            playTone({ freq: 440, duration: 0.1, type: 'sine', volume: 0.18, delay: 0 });      // A4
+            playTone({ freq: 554, duration: 0.1, type: 'sine', volume: 0.18, delay: 0.08 });   // C#5
+            playTone({ freq: 659, duration: 0.1, type: 'sine', volume: 0.18, delay: 0.16 });   // E5
+            playTone({ freq: 880, duration: 0.22, type: 'sine', volume: 0.2,  delay: 0.24 });   // A5
+        },
+
+        // 通关胜利：喜庆的六音阶琶音
+        victory() {
+            const notes = [523, 587, 659, 784, 880, 1047]; // C D E G A C
+            notes.forEach((f, i) => {
+                playTone({ freq: f, duration: 0.18, type: 'triangle', volume: 0.22, delay: i * 0.1 });
+            });
+            // 最后加一个低音鼓点
+            setTimeout(() => playTone({ freq: 130, duration: 0.3, type: 'sine', volume: 0.25 }), 0.65 * 1000);
+        },
+    };
+
+    /* =========================================================
+     * BGM 模块：播放 audio/bgm.mp3，循环播放 + 音量控制
+     * =======================================================*/
+    const Bgm = (function () {
+        const audio = new Audio('audio/bgm.mp3');
+        audio.loop = true;
+        audio.volume = 0.5;       // BGM 音量（可调）
+        audio.preload = 'auto';
+
+        let started = false;
+
+        function start() {
+            if (started) return;
+            started = true;
+            audio.currentTime = 0;
+            audio.play().catch(() => { /* 浏览器策略阻止，忽略 */ });
+        }
+
+        function stop() {
+            audio.pause();
+        }
+
+        function setMuted(muted) {
+            if (muted) {
+                audio.volume = 0;
+                audio.pause();
+            } else {
+                audio.volume = 0.5;
+                if (started) audio.play().catch(() => {});
+                else start();
+            }
+        }
+
+        return { start, stop, setMuted };
+    })();
+
+    // ---------- 对外接口 ----------
+    return {
+        // 播放指定音效
+        play(name) {
+            if (!enabled) return;
+            if (effects[name]) {
+                try { effects[name](); } catch (e) { /* 忽略音频错误 */ }
+            } else {
+                console.warn('未知音效:', name);
+            }
+        },
+        // 解锁（在用户首次点击时调用），同时启动 BGM
+        unlock() {
+            ensureContext();
+            if (enabled) Bgm.start();
+        },
+        // 开关切换（影响音效 + BGM 同时静音）
+        toggle() {
+            enabled = !enabled;
+            Bgm.setMuted(!enabled);
+            return enabled;
+        },
+        // 查询状态
+        isEnabled() { return enabled; },
+    };
+})();
+/* ========================================================= */
+
 /* =========================================================
  * 潮汕嵌瓷非遗体验小游戏
  * 结构：home -> 选关 -> 6 步 -> finale -> 回选关
@@ -892,7 +1134,7 @@ function stepDots(current) {
 function topBar(title, backTarget, stepLabel, stepCurrent) {
     return `
       <div class="top-bar">
-        <button class="back-btn" onclick="go('${backTarget}')">← 返回</button>
+        <button class="back-btn" onclick="SfxManager.play('click'); go('${backTarget}')">← 返回</button>
         <div class="step-label">${stepLabel}</div>
         <div style="width:60px"></div>
       </div>
@@ -935,7 +1177,7 @@ function renderHome() {
         </div>
 
         <div class="btn-row">
-            <button class="btn" onclick="go('s2')">开始体验 →</button>
+            <button class="btn" onclick="SfxManager.play('click'); go('s2')">开始体验 →</button>
         </div>
 
         <div class="footer-text">共 3 个关卡 · 每关 6 道工序</div>
@@ -947,7 +1189,7 @@ function renderHome() {
 // =========================================================
 function renderLevelSelect() {
     let cards = LEVELS.map(lv => `
-        <div class="level level-${lv.id}" onclick="startLevel(${lv.id})">
+        <div class="level level-${lv.id}" onclick="SfxManager.play('click'); startLevel(${lv.id})">
             <div class="ltitle">${lv.title}</div>
             <div class="lmeta">
                 ${lv.name} · ${lv.difficulty}<br>
@@ -1012,9 +1254,9 @@ function renderS2() {
             </div>
 
             <div class="chips" id="chips">
-                <div class="chip chip-shell" onclick="addIngredient('shell')">贝壳灰 +1</div>
-                <div class="chip chip-paper" onclick="addIngredient('paper')">纸筋 +1</div>
-                <div class="chip chip-sugar" onclick="addIngredient('sugar')">红糖 +1</div>
+                <div class="chip chip-shell" onclick="SfxManager.play('add'); addIngredient('shell')">贝壳灰 +1</div>
+                <div class="chip chip-paper" onclick="SfxManager.play('add'); addIngredient('paper')">纸筋 +1</div>
+                <div class="chip chip-sugar" onclick="SfxManager.play('add'); addIngredient('sugar')">红糖 +1</div>
             </div>
 
             <div class="recipe" id="recipe">
@@ -1024,8 +1266,8 @@ function renderS2() {
             </div>
 
             <div class="btn-row">
-                <button class="btn ghost" onclick="resetMortar()">重置</button>
-                <button class="btn" id="submit-mortar" onclick="submitMortar()" disabled>配比完成后解锁</button>
+                <button class="btn ghost" onclick="SfxManager.play('click'); resetMortar()">重置</button>
+                <button class="btn" id="submit-mortar" onclick="SfxManager.play('success'); submitMortar()" disabled>配比完成后解锁</button>
             </div>
             <p class="muted" style="margin-top:10px" id="mortar-hint">目标：4 : 2 : 1</p>
         </div>
@@ -1135,11 +1377,13 @@ function attachDragDrop(type, slotIdList) {
         const pieceId = pieceEl.dataset.piece;
         const slotId = slotEl.dataset.slot;
         if (pieceId !== slotId) {
+            SfxManager.play('error'); // 放置错误
             toast('位置不对，再试试');
             return;
         }
         if (slotEl.classList.contains('filled')) return;
 
+        SfxManager.play('place'); // 放置正确
         slotEl.classList.add('filled');
         slotEl.innerHTML = pieceEl.innerHTML;
         slotEl.querySelector('.piece-label').textContent = slotEl.querySelector('.piece-label') ? slotEl.querySelector('.piece-label').textContent : '';
@@ -1147,6 +1391,7 @@ function attachDragDrop(type, slotIdList) {
         placed.add(slotId);
 
         if (placed.size === total) {
+            SfxManager.play('success'); // 全部对齐
             const btn = document.getElementById('btn-next');
             if (btn) btn.disabled = false;
             const hint = document.getElementById('puzzle-hint');
@@ -1185,7 +1430,7 @@ function renderS4() {
             <button class="longpress-btn" id="press-btn">长按控力</button>
 
             <div class="btn-row">
-                <button class="btn" id="btn-next-s4" disabled onclick="finishPress()">进入下一步 →</button>
+                <button class="btn" id="btn-next-s4" disabled onclick="SfxManager.play('success'); finishPress()">进入下一步 →</button>
             </div>
         </div>
     `;
@@ -1233,6 +1478,7 @@ function renderS4() {
 
     function start() {
         if (pressing || switching || currentIndex > total) return;
+        SfxManager.play('click'); // 按下按钮
         progress = 0;
         handle.style.left = '0%';
         pressing = true;
@@ -1248,6 +1494,7 @@ function renderS4() {
         img.classList.remove('pulse');
 
         if (progress >= gStart && progress <= gEnd) {
+            SfxManager.play('break'); // 剪碎成功
             // 成功：淡出 -> 切碎瓷片 -> 播动画 -> 淡出 -> 切下一张 -> 淡入
             img.style.transition = 'opacity 0.15s';
             img.style.opacity = '0';
@@ -1281,9 +1528,11 @@ function renderS4() {
                 }, 700);
             }, 150);
         } else if (progress < gStart) {
+            SfxManager.play('fail'); // 力度不足
             toast('力度不足');
             text.textContent = '松手太早，瓷片还没剪到位，长按再试。';
         } else {
+            SfxManager.play('fail'); // 力度过大
             toast('力度过大');
             text.textContent = '力度过猛，瓷片剪太碎了！轻一点再试。';
         }
@@ -1333,8 +1582,8 @@ function renderS5() {
             </div>
 
             <div class="btn-row">
-                <button class="btn ghost" onclick="go('s5')">↻ 重来</button>
-                <button class="btn" id="btn-next" disabled onclick="finishInlay()">完成 →</button>
+                <button class="btn ghost" onclick="SfxManager.play('click'); go('s5')">↻ 重来</button>
+                <button class="btn" id="btn-next" disabled onclick="SfxManager.play('click'); finishInlay()">完成 →</button>
             </div>
             <p class="muted" style="margin-top:8px" id="puzzle-hint">已镶嵌：0 / ${total} 片</p>
         </div>
@@ -1431,8 +1680,10 @@ function setupPuzzle(imgPrefix, total) {
             const relativeY = (ghostCenterY - boardRect.top) / boardRect.height;
 
             if (isCorrectPosition(imgPrefix, pieceIndex, relativeX, relativeY) && !placed.has(pieceIndex)) {
+                SfxManager.play('place'); // 放置正确
                 placePiece(pieceIndex);
             } else {
+                SfxManager.play('error'); // 放置错误
                 toast('位置不对，再试试');
             }
         }
@@ -1569,6 +1820,7 @@ function setupPuzzle(imgPrefix, total) {
     }
 
     function showCompleteImage() {
+        SfxManager.play('success'); // 全部镶嵌完成
         const boardWrap = board.parentElement;
         
         // 隐藏所有拼图块
@@ -1622,8 +1874,8 @@ function renderS6() {
             <div class="trace-hint">用鼠标 / 手指 沿着虚线一笔画完</div>
 
             <div class="btn-row">
-                <button class="btn ghost" onclick="go('s6')">↻ 重新描摹</button>
-                <button class="btn" id="btn-trace-next" disabled onclick="finishTrace()">完成 →</button>
+                <button class="btn ghost" onclick="SfxManager.play('click'); go('s6')">↻ 重新描摹</button>
+                <button class="btn" id="btn-trace-next" disabled onclick="SfxManager.play('success'); finishTrace()">完成 →</button>
             </div>
         </div>
     `;
@@ -2566,6 +2818,7 @@ function setupTrace(lv) {
     }
 
     function handleStart(e) {
+        SfxManager.play('draw_start'); // 下笔开始
         drawing = true;
         const pos = posOf(e);
         ctx.beginPath();
@@ -2616,9 +2869,11 @@ function setupTrace(lv) {
 
         accEl.textContent = `贴合度：${score}%（覆盖 ${Math.round(coverage * 100)}% · 精度 ${Math.round(accuracy * 100)}%）`;
         if (score >= 60) {
+            SfxManager.play('draw_ok'); // 描摹成功
             nextBtn.disabled = false;
             toast('✓ 修整完成！');
         } else {
+            SfxManager.play('error'); // 贴合度不足
             toast(`贴合度 ${score}%，再沿虚线描一次`);
         }
     }
@@ -2650,6 +2905,7 @@ function finishTrace() {
 // 通关结算
 // =========================================================
 function renderFinale() {
+    SfxManager.play('victory'); // 通关胜利音效
     const lv = state.level;
     app.innerHTML = `
         ${topBar('通关 · ' + lv.title, 'level', '第六步完成', 6)}
@@ -2666,8 +2922,8 @@ function renderFinale() {
                 </div>
             </div>
             <div class="btn-row">
-                <button class="btn ghost" onclick="go('home')">返回首页</button>
-                <button class="btn" onclick="go('level')">选择其它图纸</button>
+                <button class="btn ghost" onclick="SfxManager.play('click'); go('home')">返回首页</button>
+                <button class="btn" onclick="SfxManager.play('click'); go('level')">选择其它图纸</button>
             </div>
             <p class="muted" style="margin-top:14px;">
                 嵌瓷以碎瓷为墨，屋脊为纸，以匠心绘就潮汕百年文化。
@@ -2675,6 +2931,32 @@ function renderFinale() {
         </div>
     `;
 }
+
+// ---------- 音效开关 & 全局首次交互解锁 ----------
+(function initSoundToggle() {
+    const btn = document.getElementById('soundToggle');
+    if (!btn) return;
+
+    // 全局首次任意点击/触摸 → 解锁 AudioContext（浏览器自动播放策略）
+    function unlockOnce(e) {
+        SfxManager.unlock();
+        document.removeEventListener('click', unlockOnce, true);
+        document.removeEventListener('touchstart', unlockOnce, true);
+    }
+    document.addEventListener('click', unlockOnce, true);
+    document.addEventListener('touchstart', unlockOnce, true);
+
+    // 音效开关
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        SfxManager.unlock(); // 确保点开关本身也能解锁
+        const on = SfxManager.toggle();
+        btn.textContent = on ? '🔊' : '🔇';
+        btn.classList.toggle('muted', !on);
+        btn.title = on ? '音乐 & 音效：开启（点击关闭）' : '音乐 & 音效：已静音（点击开启）';
+        if (on) SfxManager.play('click'); // 开的时候"叮"一下给用户反馈
+    });
+})();
 
 // ---------- 启动 ----------
 render();

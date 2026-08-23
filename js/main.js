@@ -69,7 +69,7 @@ function renderTeam() {
 //    方案 A（推荐）：在 galleryImages 数组里填入 50 张图片路径。
 //    方案 B：按命名约定自动生成（下方已提供示例，文件名从 1.jpg 到 50.jpg）。
 // ------------------------------------------------------------
-const galleryImages = Array.from({ length: 31 }, (_, i) =>
+const galleryImages = Array.from({ length: 39 }, (_, i) =>
     `https://shuyun-ci-img.oss-cn-shenzhen.aliyuncs.com/photos/sycg%28${i + 1}%29.jpg`
 );
 
